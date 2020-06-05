@@ -1,4 +1,5 @@
 ﻿using ResourceManager.Domain;
+using ResourceManager.Domain.Interfaces;
 using System;
 
 namespace ResourceManager

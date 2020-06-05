@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using ResourceManager.Domain;
+using ResourceManager.Data;
+using ResourceManager.Domain.Interfaces;
 
 namespace ResourceManager.Controllers
 {
@@ -12,6 +13,12 @@ namespace ResourceManager.Controllers
     /// </summary>
     public class ResourcesController : Controller, IController
     {
+        private ManagerDbContext _ctx;
+
+        public ResourcesController(ManagerDbContext ctx)
+        {
+            _ctx = ctx;
+        }
         public void AddResource(IResource resource, DateTime fromDate)
         {
             throw new NotImplementedException();

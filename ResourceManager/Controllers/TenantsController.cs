@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ResourceManager.Data;
 using ResourceManager.Domain;
+using ResourceManager.Domain.Implementations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +14,17 @@ namespace ResourceManager.Controllers
     /// </summary>
     public class TenantsController : Controller, ITenantsController
     {
-        public void AddTenant(ITenant Tenant)
+        private ManagerDbContext _ctx;
+
+        public TenantsController(ManagerDbContext ctx)
         {
-            throw new NotImplementedException();
+            _ctx = ctx;
+        }
+
+        public void AddTenant(Tenant Tenant)
+        {
+
+           _ctx.Tenants.Add(Tenant);
         }
 
         public void RemoveTenant(Guid Id)
