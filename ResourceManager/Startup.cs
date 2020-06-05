@@ -35,6 +35,7 @@ namespace ResourceManager
             ));
             services.AddSingleton<IResourceFactory, ResourceFactory>();
             services.AddSingleton<ITenantsFactory, TenantsFactory>();
+            services.AddSingleton<IFetchHelper, FetchHelper>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

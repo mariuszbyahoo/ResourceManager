@@ -17,10 +17,12 @@ namespace ResourceManager.Controllers
     {
         private ManagerDbContext _ctx;
         private ITenantsFactory _factory;
+        private FetchHelper _helper;
 
-        public TenantsController(ManagerDbContext ctx, ITenantsFactory factory)
+        public TenantsController(ManagerDbContext ctx, FetchHelper helper, ITenantsFactory factory)
         {
             _ctx = ctx;
+            _helper = helper;
             _factory = factory;
         }
 
@@ -32,7 +34,7 @@ namespace ResourceManager.Controllers
             if (Tenant == null)
                 return BadRequest("Incorrect data provided");
 
-            var lookup = GetTenantById(Tenant.Id);
+            var lookup = _helper.GetTenantById(Tenant.Id, _ctx);
 
             // Czy istnieje już Tenant z takim ID
             if (lookup != null)
@@ -58,7 +60,7 @@ namespace ResourceManager.Controllers
         [Route("delete/{Id}")]
         public ActionResult RemoveTenantAction(Guid Id)
         {
-            if (GetTenantById(Id) == null)
+            if (_helper.GetTenantById(Id, _ctx) == null)
                 return BadRequest("Such a Tenant is missing.");
 
             RemoveTenant(Id);
@@ -74,7 +76,7 @@ namespace ResourceManager.Controllers
         /// <param name="Id"></param>
         public void RemoveTenant(Guid Id)
         {
-            _ctx.Tenants.Remove(GetTenantById(Id));
+            _ctx.Tenants.Remove(_helper.GetTenantById(Id, _ctx));
             _ctx.SaveChanges();
         }
 
@@ -82,7 +84,7 @@ namespace ResourceManager.Controllers
         [Route("patch")]
         public ActionResult SetTenantsPriorityAction([FromBody] Tenant tenant)
         {
-            var tenantFromDb = GetTenantById(tenant.Id);
+            var tenantFromDb = _helper.GetTenantById(tenant.Id, _ctx);
             if (tenantFromDb == null)
                 return BadRequest("Such a tenant is missing");
 
@@ -94,16 +96,10 @@ namespace ResourceManager.Controllers
         public void SetTenantsPriority(Guid Id, byte NewPriority)
         {
             // ciągłe powtarzanie użycia metody GetTenantById wymuszone przez z góry ustalone w wymaganiach argumenty do metod interfejsu.
-            var tenant = GetTenantById(Id);
+            var tenant = _helper.GetTenantById(Id, _ctx);
             tenant.Priority = NewPriority;
             _ctx.Update(tenant);
             _ctx.SaveChanges();
-        }
-
-        private Tenant GetTenantById(Guid Id)
-        {
-            return _ctx.Tenants.Where(t => t.Id.Equals(Id)).FirstOrDefault();
-
         }
     }
 }
