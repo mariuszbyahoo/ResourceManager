@@ -1,10 +1,11 @@
 ﻿using ResourceManager.Domain.Enums;
 using ResourceManager.Domain.Models;
+using System;
 
 namespace ResourceManager.Domain.Factories
 {
     public interface IResourceFactory
     {
-        IResource CreateInstance(string variant, ResourceType type);
+        IResource CreateInstance(Guid Id, string variant, ResourceType type);
     }
 }

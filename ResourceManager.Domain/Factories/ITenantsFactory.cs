@@ -1,10 +1,11 @@
 ﻿using ResourceManager.Domain.Enums;
 using ResourceManager.Domain.Models;
+using System;
 
 namespace ResourceManager.Domain.Factories
 {
     public interface ITenantsFactory
     {
-        ITenant CreateInstance(byte Priority, TenantType type);
+        ITenant CreateInstance(Guid Id, byte Priority, TenantType type);
     }
 }
