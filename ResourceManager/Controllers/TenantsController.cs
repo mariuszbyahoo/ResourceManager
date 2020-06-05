@@ -12,6 +12,7 @@ namespace ResourceManager.Controllers
     /// <summary>
     /// Implementacja kontrolera dzierżawców
     /// </summary>
+    [Route("tenants")]
     public class TenantsController : Controller, ITenantsController
     {
         private ManagerDbContext _ctx;
@@ -24,16 +25,25 @@ namespace ResourceManager.Controllers
         }
 
         [HttpPost]
-        [Route("addTenant")]
+        [Route("add")]
         public ActionResult<ITenant> AddTenantAction([FromBody]Tenant Tenant)
         {
+            // W przypadku dostarczenia nieprawidłowego GUID, obiekt "Tenant" będzie referencją do null
+            if (Tenant == null)
+                return BadRequest("Incorrect data provided");
+
+            var lookup = _ctx.Tenants.Where(tenant => tenant.Id.Equals(Tenant.Id)).FirstOrDefault();
+
+            if (lookup != null)
+                return BadRequest("Tenant with such an ID already exists");
+
             AddTenant(Tenant);
             return Created("addTenant", Tenant);
         }
         
         public void AddTenant(ITenant Tenant)
         {
-            var tenant = new Tenant { Id = Tenant.Id, Priority = Tenant.Priority };
+            var tenant = _factory.CreateInstance(Tenant.Id, Tenant.Priority, "Tenant") as Tenant;
             _ctx.Tenants.Add(tenant);
             _ctx.SaveChanges();
         }
