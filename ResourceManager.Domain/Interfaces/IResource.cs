@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ResourceManager.Domain
+namespace ResourceManager.Domain.Interfaces
 {
 	/// <summary>
 	/// Zasób
@@ -12,7 +12,7 @@ namespace ResourceManager.Domain
 		/// <summary>
 		/// Identyfikator zasobu
 		/// </summary>
-		Guid Id { get; set; }
+		Guid Id { get;}
 
 		/// <summary>
 		/// Wariant zasobu

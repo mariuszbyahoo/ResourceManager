@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ResourceManager.Domain
+namespace ResourceManager.Domain.Interfaces
 {
 	/// <summary>
 	/// Dzierżawca
@@ -12,7 +12,7 @@ namespace ResourceManager.Domain
 		/// <summary>
 		/// Identyfikator dzierżawcy
 		/// </summary>
-		Guid Id { get; set; }
+		Guid Id { get;}
 
 		/// <summary>
 		/// Priorytet dzierżawcy
