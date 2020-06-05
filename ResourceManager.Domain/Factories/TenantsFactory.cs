@@ -8,7 +8,7 @@ using System.Text;
 
 namespace ResourceManager.Domain.Factories
 {
-    public class TenantsFactory
+    public class TenantsFactory : ITenantsFactory
     {
         /// <summary>
         /// Tworzy nową instancję klasy Tenant
