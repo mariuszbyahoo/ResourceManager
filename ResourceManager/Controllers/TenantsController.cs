@@ -34,7 +34,7 @@ namespace ResourceManager.Controllers
             if (Tenant == null)
                 return BadRequest("Incorrect data provided");
 
-            var lookup = _helper.GetTenantById(Tenant.Id, _ctx);
+            var lookup = _helper.GetTenant(Tenant.Id, _ctx);
 
             // Czy istnieje już Tenant z takim ID
             if (lookup != null)
@@ -60,7 +60,7 @@ namespace ResourceManager.Controllers
         [Route("delete/{Id}")]
         public ActionResult RemoveTenantAction(Guid Id)
         {
-            if (_helper.GetTenantById(Id, _ctx) == null)
+            if (_helper.GetTenant(Id, _ctx) == null)
                 return BadRequest("Such a Tenant is missing.");
 
             RemoveTenant(Id);
@@ -76,7 +76,7 @@ namespace ResourceManager.Controllers
         /// <param name="Id"></param>
         public void RemoveTenant(Guid Id)
         {
-            _ctx.Tenants.Remove(_helper.GetTenantById(Id, _ctx));
+            _ctx.Tenants.Remove(_helper.GetTenant(Id, _ctx));
             _ctx.SaveChanges();
         }
 
@@ -84,7 +84,7 @@ namespace ResourceManager.Controllers
         [Route("patch")]
         public ActionResult SetTenantsPriorityAction([FromBody] Tenant tenant)
         {
-            var tenantFromDb = _helper.GetTenantById(tenant.Id, _ctx);
+            var tenantFromDb = _helper.GetTenant(tenant.Id, _ctx);
             if (tenantFromDb == null)
                 return BadRequest("Such a tenant is missing");
 
@@ -96,7 +96,7 @@ namespace ResourceManager.Controllers
         public void SetTenantsPriority(Guid Id, byte NewPriority)
         {
             // ciągłe powtarzanie użycia metody GetTenantById wymuszone przez z góry ustalone w wymaganiach argumenty do metod interfejsu.
-            var tenant = _helper.GetTenantById(Id, _ctx);
+            var tenant = _helper.GetTenant(Id, _ctx);
             tenant.Priority = NewPriority;
             _ctx.Update(tenant);
             _ctx.SaveChanges();

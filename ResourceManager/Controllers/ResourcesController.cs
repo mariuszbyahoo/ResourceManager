@@ -35,7 +35,7 @@ namespace ResourceManager.Controllers
             if (resource == null)
                 return BadRequest("Incorrect data provided");
 
-            var lookup = _helper.GetResourceById(resource.Id, _ctx);
+            var lookup = _helper.GetResource(resource.Id, _ctx);
             if (lookup != null)
                 return BadRequest("Resource with such an ID already exists");
 
@@ -57,7 +57,7 @@ namespace ResourceManager.Controllers
         [Route("delete/{Id}")]
         public IActionResult WithdrawResourceAction(Guid Id)
         {
-            var res = _helper.GetResourceById(Id, _ctx);
+            var res = _helper.GetResource(Id, _ctx);
             if (res == null)
                 return BadRequest("Resource with such an ID does not exist.");
 
@@ -78,7 +78,7 @@ namespace ResourceManager.Controllers
         [Route("free")]
         public ActionResult FreeResourceAction(Guid res, Guid ten)
         {
-            var resource = _helper.GetResourceById(res, _ctx);
+            var resource = _helper.GetResource(res, _ctx);
             if (resource == null)
                 return BadRequest($"Resource with an ID of: {res} is missing");
             var tenant = _ctx.Tenants.Where(tenant => tenant.Id.Equals(ten)).FirstOrDefault();
@@ -108,7 +108,7 @@ namespace ResourceManager.Controllers
             } catch (Exception ex)
             {
                 LogErrorToFile(ex);
-                throw new Exception("An error occured, specific information logged to 'errors.txt'", ex);
+                return false;
             }
         }
 
@@ -116,10 +116,10 @@ namespace ResourceManager.Controllers
         [Route("lease")]
         public ActionResult LeaseResourceAction(Guid res, Guid ten) 
         {
-            var resource = _helper.GetResourceById(res, _ctx);
+            var resource = _helper.GetResource(res, _ctx);
             if (resource == null)
                 return BadRequest("Resource with such an ID is missing");
-            var tenant = _helper.GetTenantById(ten, _ctx);
+            var tenant = _helper.GetTenant(ten, _ctx);
             if (tenant == null)
                 return BadRequest("Resource with such an ID is missing");
 
@@ -142,14 +142,53 @@ namespace ResourceManager.Controllers
             catch(Exception ex)
             {
                 LogErrorToFile(ex);
-                throw new Exception("An error occured, specific information logged to 'errors.txt'", ex);
+                return false;
             }
+        }
+
+        [HttpPatch]
+        [Route("lease")]
+        public ActionResult LeaseResourceAction(string variant, Guid ten)
+        {
+            IResource resource;
+            // zrób coś z null-checkiem co do zasobów, przemieść go np. do metody poniżej.
+            var resources = _helper.GetResources(variant, _ctx);
+            if (resources.Length == 0)
+                return NotFound("Not found any resources with such a variant.");
+            // **************************************
+            var tenant = _helper.GetTenant(ten, _ctx);
+            // opisz w mailu czemu tu NotFound a innym razem BadRequest
+            if (tenant == null)
+                return BadRequest("Not found any tenant with such an ID");
+
+            if (LeaseResource(variant, tenant, DateTime.Now, out resource))
+                return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {ten}, and a message has been sent");
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
         }
 
         public bool LeaseResource(string variant, ITenant tenant, DateTime date, out IResource resource)
         {
-            // null-check of tenant & resource
-            throw new NotImplementedException();
+            // LEPSZY SPOSÓB NA TRY CATCHE W ASP.NET CORE API : https://stackoverflow.com/questions/37793418/how-to-return-http-500-from-asp-net-core-rc2-web-api
+            // ZRÓB TAK JAK POWYŻEJ!!!!!!!!!!!!!!!!!!!!!!*******************************************************************************************
+            try
+            {
+                resource = null;
+                var resources = _helper.GetResources(variant, _ctx);
+                if (resources.Length == 0)
+                    return false;
+
+                // wynikowo zrób tak, żeby rozpoznawał, który najdłużej leży odłogiem i go zwróć, do tego będzie trzeba jakiś IComparable czy coś.
+                resource = resources[0];
+
+                return true;
+            }
+            catch(Exception ex)
+            {
+                LogErrorToFile(ex);
+                resource = null;
+                return false;
+            }
         }
 
         public void LogErrorToFile(Exception ex)

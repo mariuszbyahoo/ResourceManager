@@ -9,14 +9,19 @@ namespace ResourceManager
 {
     public class FetchHelper : IFetchHelper
     {
-        public Tenant GetTenantById(Guid Id, ManagerDbContext _ctx)
+        public Tenant GetTenant(Guid Id, ManagerDbContext _ctx)
         {
             return _ctx.Tenants.Where(t => t.Id.Equals(Id)).FirstOrDefault();
         }
 
-        public Resource GetResourceById(Guid Id, ManagerDbContext _ctx)
+        public Resource GetResource(Guid Id, ManagerDbContext _ctx)
         {
             return _ctx.Resources.Where(r => r.Id.Equals(Id)).FirstOrDefault();
+        }
+
+        public Resource[] GetResources(string variant, ManagerDbContext _ctx)
+        {
+            return _ctx.Resources.Where(r => r.Variant.ToLower().Equals(variant.ToLower())).ToArray();
         }
     }
 }

@@ -9,7 +9,9 @@ namespace ResourceManager
     /// </summary>
     public interface IFetchHelper
     {
-        Tenant GetTenantById(Guid Id, ManagerDbContext _ctx);
-        Resource GetResourceById(Guid Id, ManagerDbContext _ctx);
+        Tenant GetTenant(Guid Id, ManagerDbContext _ctx);
+        Resource GetResource(Guid Id, ManagerDbContext _ctx);
+
+        Resource[] GetResources(string variant, ManagerDbContext _ctx);
     }
 }
