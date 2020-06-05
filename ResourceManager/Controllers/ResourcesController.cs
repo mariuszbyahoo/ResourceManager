@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ResourceManager.Data;
 using ResourceManager.Domain.Factories;
@@ -64,14 +66,47 @@ namespace ResourceManager.Controllers
         }
         public void WithdrawResource(IResource resource, DateTime fromDate)
         {
+            // Do something with those dates!!!
             var res = _ctx.Resources.Where(res => res.Id.Equals(resource.Id)).FirstOrDefault();
             _ctx.Resources.Remove(res);
             _ctx.SaveChanges();
         }
+
+        [HttpPatch]
+        [Route("free/res={ResourceId}&ten={TenantId}")]
+        public ActionResult FreeResourceAction(Guid ResourceId, Guid TenantId)
+        {
+            var res = GetResourceById(ResourceId);
+            if (res == null)
+                return BadRequest($"Resource with an ID of: {ResourceId} is missing");
+            var ten = _ctx.Tenants.Where(tenant => tenant.Id.Equals(TenantId)).FirstOrDefault();
+            if (ten == null)
+                return BadRequest($"Tenant with an ID of: {TenantId} is missing");
+
+            if(FreeResource(res, ten, DateTime.Now))
+                return Ok($"Resource with an ID of:{ResourceId} released, and message has been sent succesfully to tenant with an ID of:{TenantId}");
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when releasing the resource, check the 'errors.txt' file");
+
+            // TODO notify the tenant !!
+
+        }
+
         public bool FreeResource(IResource resource, ITenant tenant, DateTime date)
         {
-            // null-check of tenant & resource
-            throw new NotImplementedException();
+            try
+            {
+                resource.Availability = Domain.Enums.ResourceStatus.Available;
+                _ctx.Update(resource);
+                _ctx.SaveChanges();
+                // send a message to Tenant
+                // do something with the date
+                return true;
+            } catch(Exception ex)
+            {
+                LogErrorToFile(ex);
+                throw new Exception("An error occured, specific information logged to 'errors.txt'", ex);
+            }
         }
 
         public bool LeaseResource(IResource resource, ITenant tenant, DateTime date)
@@ -89,6 +124,16 @@ namespace ResourceManager.Controllers
         private IResource GetResourceById(Guid Id)
         {
             return _ctx.Resources.Where(res => res.Id.Equals(Id)).FirstOrDefault();
+        }
+
+        public void LogErrorToFile(Exception ex)
+        {
+            var w = new StreamWriter("errors.txt");
+            w.Write("\r\nLog Entry : ");
+            w.WriteLine($"{DateTime.Now.ToLongTimeString()} {DateTime.Now.ToLongDateString()}");
+            w.WriteLine("  :");
+            w.WriteLine($"  :{ex.Message}");
+            w.WriteLine("-------------------------------");
         }
     }
 }
