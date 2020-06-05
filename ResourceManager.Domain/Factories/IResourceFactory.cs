@@ -6,6 +6,6 @@ namespace ResourceManager.Domain.Factories
 {
     public interface IResourceFactory
     {
-        IResource CreateInstance(Guid Id, string variant, ResourceType type);
+        IResource CreateInstance(Guid Id, string variant, string typeName);
     }
 }

@@ -15,10 +15,10 @@ namespace ResourceManager.Domain.Factories
         /// <param name="Priority"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public ITenant CreateInstance(Guid Id, byte Priority, TenantType type)
+        public ITenant CreateInstance(Guid Id, byte Priority, string typeName)
         {
-            switch (type) {
-                case TenantType.Tenant:
+            switch (typeName.ToLower()) {
+                case "tenant":
                     return new Tenant
                     {
                         Id = Id,

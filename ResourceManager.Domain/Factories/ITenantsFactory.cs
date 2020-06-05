@@ -6,6 +6,6 @@ namespace ResourceManager.Domain.Factories
 {
     public interface ITenantsFactory
     {
-        ITenant CreateInstance(Guid Id, byte Priority, TenantType type);
+        ITenant CreateInstance(Guid Id, byte Priority, string typeName);
     }
 }

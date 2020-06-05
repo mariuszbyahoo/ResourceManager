@@ -14,11 +14,11 @@ namespace ResourceManager.Domain.Factories
         /// <param name="variant"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public IResource CreateInstance(Guid Id, string variant, ResourceType type)
+        public IResource CreateInstance(Guid Id, string variant, string typeName)
         {
-            switch (type)
+            switch (typeName)
             {
-                case ResourceType.Resource:
+                case "Resource":
                     return new Resource
                     {
                         Id = Id,
