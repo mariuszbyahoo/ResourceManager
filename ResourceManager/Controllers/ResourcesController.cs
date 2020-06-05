@@ -12,6 +12,7 @@ namespace ResourceManager.Controllers
     /// <summary>
     /// Implementacja kontrolera zasobów
     /// </summary>
+    [Route("resources")]
     public class ResourcesController : Controller, IController
     {
         private ManagerDbContext _ctx;
@@ -22,6 +23,22 @@ namespace ResourceManager.Controllers
             _ctx = ctx;
             _factory = factory;
         }
+
+        [HttpPost]
+        [Route("add")]
+        public ActionResult<IResource> AddResourceAction([FromBody] Resource resource)
+        {
+            var res = GetResourceById(resource.Id);
+            if (res == null)
+                return BadRequest("Resource with such an ID already exists");
+
+            // O CO CHODZI Z TYMI DATAMI??? >>>==--> SPRAWDŹ
+
+            AddResource(resource, DateTime.Now);
+
+            return Created("add", resource);
+        }
+
         public void AddResource(IResource resource, DateTime fromDate)
         {
             throw new NotImplementedException();
@@ -47,6 +64,11 @@ namespace ResourceManager.Controllers
         {
             // null-check of tenant & resource
             throw new NotImplementedException();
+        }
+
+        private IResource GetResourceById(Guid Id)
+        {
+            return _ctx.Resources.Where(res => res.Id.Equals(Id)).FirstOrDefault();
         }
     }
 }
