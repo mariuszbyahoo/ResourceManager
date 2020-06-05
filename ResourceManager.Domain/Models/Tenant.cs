@@ -6,8 +6,8 @@ namespace ResourceManager.Domain.Models
 {
     public class Tenant : ITenant
     {
-        public Guid Id { get;} = Guid.NewGuid();
+        public Guid Id { get; set; }
 
-        public byte Priority { get; set; } = 0;
+        public byte Priority { get; set; }
     }
 }

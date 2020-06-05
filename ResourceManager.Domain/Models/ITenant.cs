@@ -12,7 +12,7 @@ namespace ResourceManager.Domain.Models
 		/// <summary>
 		/// Identyfikator dzierżawcy
 		/// </summary>
-		Guid Id { get;}
+		Guid Id { get; set; }
 
 		/// <summary>
 		/// Priorytet dzierżawcy

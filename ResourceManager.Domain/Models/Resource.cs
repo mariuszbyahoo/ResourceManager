@@ -7,8 +7,8 @@ namespace ResourceManager.Domain.Models
 {
     public class Resource : IResource
     {
-        public Guid Id { get;} = Guid.NewGuid();
-        public string Variant { get; set; } = "N/A";
+        public Guid Id { get; set; }
+        public string Variant { get; set; }
         public ResourceStatus Availability { get; set; } = ResourceStatus.Available;
         public Guid LeasedTo { get; set; } = Guid.Empty;
     }

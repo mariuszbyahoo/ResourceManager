@@ -13,7 +13,7 @@ namespace ResourceManager.Domain.Models
 		/// <summary>
 		/// Identyfikator zasobu
 		/// </summary>
-		Guid Id { get;}
+		Guid Id { get; set; }
 
 		/// <summary>
 		/// Wariant zasobu
