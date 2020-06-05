@@ -28,7 +28,7 @@ namespace ResourceManager
         {
             services.AddControllers();
 
-            services.AddDbContext<ResourceManagerDbContext>(options => 
+            services.AddDbContext<ManagerDbContext>(options => 
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")
             ));
         }

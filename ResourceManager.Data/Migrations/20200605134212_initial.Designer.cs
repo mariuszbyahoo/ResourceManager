@@ -9,8 +9,8 @@ using ResourceManager.Data;
 
 namespace ResourceManager.Data.Migrations
 {
-    [DbContext(typeof(ResourceManagerDbContext))]
-    [Migration("20200605132538_initial")]
+    [DbContext(typeof(ManagerDbContext))]
+    [Migration("20200605134212_initial")]
     partial class initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -8,8 +8,8 @@ using ResourceManager.Data;
 
 namespace ResourceManager.Data.Migrations
 {
-    [DbContext(typeof(ResourceManagerDbContext))]
-    partial class ResourceManagerDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(ManagerDbContext))]
+    partial class ManagerDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
