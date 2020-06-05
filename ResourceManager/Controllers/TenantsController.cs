@@ -23,10 +23,19 @@ namespace ResourceManager.Controllers
             _factory = factory;
         }
 
+        [HttpPost]
+        [Route("addTenant")]
+        public ActionResult<ITenant> AddTenantAction([FromBody]Tenant Tenant)
+        {
+            AddTenant(Tenant);
+            return Created("addTenant", Tenant);
+        }
+        
         public void AddTenant(ITenant Tenant)
         {
-
-            throw new NotImplementedException();
+            var tenant = new Tenant { Id = Tenant.Id, Priority = Tenant.Priority };
+            _ctx.Tenants.Add(tenant);
+            _ctx.SaveChanges();
         }
 
         public void RemoveTenant(Guid Id)
