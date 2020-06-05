@@ -49,10 +49,24 @@ namespace ResourceManager.Controllers
             _ctx.SaveChanges();
         }
 
+        [HttpDelete]
+        [Route("delete/{Id}")]
+        public IActionResult WithdrawResourceAction(Guid Id)
+        {
+            var res = GetResourceById(Id);
+            if (res == null)
+                return BadRequest("Resource with such an ID does not exist.");
+
+            // O CO CHODZI Z TYMI DATAMI??? >>>==--> SPRAWDŹ
+            WithdrawResource(res, DateTime.Now);
+
+            return NoContent();
+        }
         public void WithdrawResource(IResource resource, DateTime fromDate)
         {
-            // null-check of resource
-            throw new NotImplementedException();
+            var res = _ctx.Resources.Where(res => res.Id.Equals(resource.Id)).FirstOrDefault();
+            _ctx.Resources.Remove(res);
+            _ctx.SaveChanges();
         }
         public bool FreeResource(IResource resource, ITenant tenant, DateTime date)
         {
