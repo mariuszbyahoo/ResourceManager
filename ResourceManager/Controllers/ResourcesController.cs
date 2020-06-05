@@ -28,8 +28,11 @@ namespace ResourceManager.Controllers
         [Route("add")]
         public ActionResult<IResource> AddResourceAction([FromBody] Resource resource)
         {
-            var res = GetResourceById(resource.Id);
-            if (res == null)
+            if (resource == null)
+                return BadRequest("Incorrect data provided");
+
+            var lookup = GetResourceById(resource.Id);
+            if (lookup != null)
                 return BadRequest("Resource with such an ID already exists");
 
             // O CO CHODZI Z TYMI DATAMI??? >>>==--> SPRAWDŹ
@@ -41,8 +44,11 @@ namespace ResourceManager.Controllers
 
         public void AddResource(IResource resource, DateTime fromDate)
         {
-            throw new NotImplementedException();
+            var res = _factory.CreateInstance(resource.Id, resource.Variant, "Resource") as Resource;
+            _ctx.Resources.Add(res);
+            _ctx.SaveChanges();
         }
+
         public void WithdrawResource(IResource resource, DateTime fromDate)
         {
             // null-check of resource
