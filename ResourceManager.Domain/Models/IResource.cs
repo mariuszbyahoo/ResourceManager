@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ResourceManager.Domain.Models.Interfaces
+namespace ResourceManager.Domain.Models
 {
 	/// <summary>
 	/// Zasób

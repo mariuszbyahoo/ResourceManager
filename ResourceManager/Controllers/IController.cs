@@ -1,5 +1,4 @@
-﻿using ResourceManager.Domain;
-using ResourceManager.Domain.Interfaces;
+﻿using ResourceManager.Domain.Models;
 using System;
 
 namespace ResourceManager

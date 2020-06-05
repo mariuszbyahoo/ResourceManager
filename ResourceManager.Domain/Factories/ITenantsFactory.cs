@@ -1,5 +1,5 @@
 ﻿using ResourceManager.Domain.Enums;
-using ResourceManager.Domain.Models.Interfaces;
+using ResourceManager.Domain.Models;
 
 namespace ResourceManager.Domain.Factories
 {

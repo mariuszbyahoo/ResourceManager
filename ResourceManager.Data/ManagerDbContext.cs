@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ResourceManager.Domain.Implementations;
+using ResourceManager.Domain.Models;
 using System;
 
 namespace ResourceManager.Data

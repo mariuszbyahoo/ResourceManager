@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ResourceManager.Data;
-using ResourceManager.Domain.Interfaces;
+using ResourceManager.Domain.Factories;
+using ResourceManager.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,10 +15,12 @@ namespace ResourceManager.Controllers
     public class TenantsController : Controller, ITenantsController
     {
         private ManagerDbContext _ctx;
+        private ITenantsFactory _factory;
 
-        public TenantsController(ManagerDbContext ctx)
+        public TenantsController(ManagerDbContext ctx, ITenantsFactory factory)
         {
             _ctx = ctx;
+            _factory = factory;
         }
 
         public void AddTenant(ITenant Tenant)
