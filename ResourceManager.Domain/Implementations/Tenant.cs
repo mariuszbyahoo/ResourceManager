@@ -9,6 +9,6 @@ namespace ResourceManager.Domain.Implementations
     {
         public Guid Id { get;} = Guid.NewGuid();
 
-        public byte Priority { get; set; }
+        public byte Priority { get; set; } = 0;
     }
 }
