@@ -1,6 +1,6 @@
 ﻿namespace ResourceManager.Domain
 {
-    public enum Status
+    public enum ResourceStatus
     {
         Available = 0, Occupied = 1
     }

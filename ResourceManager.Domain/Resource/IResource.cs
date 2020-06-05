@@ -22,7 +22,7 @@ namespace ResourceManager.Domain.Interfaces
 		/// <summary>
 		/// Status zasobu; dostępny i zajęty.
 		/// </summary>
-		Status Availability { get; set; }
+		ResourceStatus Availability { get; set; }
 
 		/// <summary>
 		/// Identyfikator dzierżawcy 

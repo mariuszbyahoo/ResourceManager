@@ -9,7 +9,7 @@ namespace ResourceManager.Domain.Implementations
     {
         public Guid Id { get;} = Guid.NewGuid();
         public string Variant { get; set; } = "N/A";
-        public Status Availability { get; set; } = Status.Available;
+        public ResourceStatus Availability { get; set; } = ResourceStatus.Available;
         public Guid LeasedTo { get; set; } = Guid.Empty;
     }
 }
