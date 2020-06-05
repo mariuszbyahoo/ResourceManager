@@ -17,9 +17,9 @@ namespace ResourceManager.Controllers
     {
         private ManagerDbContext _ctx;
         private ITenantsFactory _factory;
-        private FetchHelper _helper;
+        private IFetchHelper _helper;
 
-        public TenantsController(ManagerDbContext ctx, FetchHelper helper, ITenantsFactory factory)
+        public TenantsController(ManagerDbContext ctx, IFetchHelper helper, ITenantsFactory factory)
         {
             _ctx = ctx;
             _helper = helper;

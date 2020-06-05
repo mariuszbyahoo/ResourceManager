@@ -19,9 +19,9 @@ namespace ResourceManager.Controllers
     {
         private ManagerDbContext _ctx;
         private IResourceFactory _factory;
-        private FetchHelper _helper;
+        private IFetchHelper _helper;
 
-        public ResourcesController(ManagerDbContext ctx, FetchHelper helper, IResourceFactory factory)
+        public ResourcesController(ManagerDbContext ctx, IFetchHelper helper, IResourceFactory factory)
         {
             _ctx = ctx;
             _helper = helper;
@@ -99,6 +99,7 @@ namespace ResourceManager.Controllers
             try
             {
                 resource.Availability = Domain.Enums.ResourceStatus.Available;
+                resource.LeasedTo = Guid.Empty;
                 _ctx.Update(resource);
                 _ctx.SaveChanges();
                 // send a message to Tenant
@@ -122,13 +123,27 @@ namespace ResourceManager.Controllers
             if (tenant == null)
                 return BadRequest("Resource with such an ID is missing");
 
-            throw new NotImplementedException("Dokończ te metode.....");
+            if(LeaseResource(resource, tenant, DateTime.Now))
+                return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
         }
 
         public bool LeaseResource(IResource resource, ITenant tenant, DateTime date)
         {
-            // null-check of tenant & resource
-            throw new NotImplementedException();
+            try
+            {
+                resource.Availability = Domain.Enums.ResourceStatus.Occupied;
+                resource.LeasedTo = tenant.Id;
+                _ctx.Update(resource);
+                _ctx.SaveChanges();
+                return true;
+            }
+            catch(Exception ex)
+            {
+                LogErrorToFile(ex);
+                throw new Exception("An error occured, specific information logged to 'errors.txt'", ex);
+            }
         }
 
         public bool LeaseResource(string variant, ITenant tenant, DateTime date, out IResource resource)
