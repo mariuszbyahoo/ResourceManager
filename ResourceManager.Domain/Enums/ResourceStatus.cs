@@ -1,4 +1,4 @@
-﻿namespace ResourceManager.Domain
+﻿namespace ResourceManager.Domain.Enums
 {
     public enum ResourceStatus
     {

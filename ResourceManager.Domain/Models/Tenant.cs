@@ -1,9 +1,9 @@
-﻿using ResourceManager.Domain.Interfaces;
+﻿using ResourceManager.Domain.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ResourceManager.Domain.Implementations
+namespace ResourceManager.Domain.Models.Implementations
 {
     public class Tenant : ITenant
     {

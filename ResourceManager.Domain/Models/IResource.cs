@@ -1,8 +1,9 @@
-﻿using System;
+﻿using ResourceManager.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ResourceManager.Domain.Interfaces
+namespace ResourceManager.Domain.Models.Interfaces
 {
 	/// <summary>
 	/// Zasób

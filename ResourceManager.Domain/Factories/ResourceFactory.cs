@@ -1,12 +1,14 @@
-﻿using ResourceManager.Domain.Implementations;
-using ResourceManager.Domain.Interfaces;
+﻿using ResourceManager.Domain.Enums;
+using ResourceManager.Domain.Factories;
+using ResourceManager.Domain.Models.Implementations;
+using ResourceManager.Domain.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace ResourceManager.Domain
 {
-    public class ResourceFactory
+    public class ResourceFactory : IResourceFactory
     {
         /// <summary>
         /// Tworzy nowy zasób, o podanym wariancie, domyślnie jest dostępny i nie wydzierżawiony nikomu.

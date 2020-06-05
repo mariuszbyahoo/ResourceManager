@@ -1,10 +1,12 @@
-﻿using ResourceManager.Domain.Implementations;
-using ResourceManager.Domain.Interfaces;
+﻿
+using ResourceManager.Domain.Enums;
+using ResourceManager.Domain.Models.Implementations;
+using ResourceManager.Domain.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ResourceManager.Domain
+namespace ResourceManager.Domain.Factories
 {
     public class TenantsFactory
     {
