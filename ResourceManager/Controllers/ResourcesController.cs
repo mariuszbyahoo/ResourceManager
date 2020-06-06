@@ -84,6 +84,9 @@ namespace ResourceManager.Controllers
             var tenant = _ctx.Tenants.Where(tenant => tenant.Id.Equals(ten)).FirstOrDefault();
             if (tenant == null)
                 return BadRequest($"Tenant with an ID of: {ten} is missing");
+            if (!resource.LeasedTo.Equals(tenant.Id))
+                return BadRequest($"Resource with ID of:{resource.Id} not belongs to tenant with ID of: {tenant.Id}");
+
 
             if (FreeResource(resource, tenant, DateTime.Now))
                 return Ok($"Resource with an ID of:{res} released, and message has been sent succesfully to tenant with an ID of:{ten}");
@@ -114,7 +117,7 @@ namespace ResourceManager.Controllers
 
         [HttpPatch]
         [Route("lease")]
-        public ActionResult LeaseResourceAction(Guid res, Guid ten) 
+        public IActionResult LeaseResourceAction(Guid res, Guid ten) 
         {
             var resource = _helper.GetResource(res, _ctx);
             if (resource == null)
@@ -122,6 +125,8 @@ namespace ResourceManager.Controllers
             var tenant = _helper.GetTenant(ten, _ctx);
             if (tenant == null)
                 return BadRequest("Resource with such an ID is missing");
+            if (!resource.LeasedTo.Equals(Guid.Empty))
+                return ResolveTenantsConflict(resource, tenant);
 
             if(LeaseResource(resource, tenant, DateTime.Now))
                 return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
@@ -147,7 +152,7 @@ namespace ResourceManager.Controllers
         }
 
         [HttpPatch]
-        [Route("lease")]
+        [Route("lease/any")]
         public ActionResult LeaseResourceAction(string variant, Guid ten)
         {
             IResource resource;
@@ -178,8 +183,14 @@ namespace ResourceManager.Controllers
                 if (resources.Length == 0)
                     return false;
 
-                // wynikowo zrób tak, żeby rozpoznawał, który najdłużej leży odłogiem i go zwróć, do tego będzie trzeba jakiś IComparable czy coś.
+                // Wybierz ten, który najdłużej leży odłogiem i jest wolny
                 resource = resources[0];
+
+                resource.Availability = Domain.Enums.ResourceStatus.Occupied;
+                resource.LeasedTo = tenant.Id;
+
+                _ctx.Update(resource);
+                _ctx.SaveChanges();
 
                 return true;
             }
@@ -199,6 +210,22 @@ namespace ResourceManager.Controllers
             w.WriteLine("  :");
             w.WriteLine($"  :{ex.Message}");
             w.WriteLine("-------------------------------");
+        }
+
+        private IActionResult ResolveTenantsConflict(IResource resource, ITenant tenant)
+        {
+                var concurrent = _helper.GetTenant(resource.LeasedTo, _ctx);
+                if (concurrent == null)
+                    return StatusCode(StatusCodes.Status500InternalServerError, "Resource is leased to tenant which is not existing anymore, an error occured.");
+                if (concurrent.Priority < tenant.Priority)
+                {
+                // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
+                    if (LeaseResource(resource, tenant, DateTime.Now))
+                        return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and a message has been sent");
+                    else
+                        return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
+                }
+                return BadRequest("Resource with such an ID is already leased by a tenant with higher priority");
         }
     }
 }

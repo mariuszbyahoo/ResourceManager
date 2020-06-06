@@ -60,6 +60,7 @@ namespace ResourceManager.Controllers
         [Route("delete/{Id}")]
         public ActionResult RemoveTenantAction(Guid Id)
         {
+            // TODO zwolnij wszystkie wynajęte przez niego zasoby od razu.
             if (_helper.GetTenant(Id, _ctx) == null)
                 return BadRequest("Such a Tenant is missing.");
 
