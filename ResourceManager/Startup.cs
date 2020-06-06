@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ResourceManager.Data;
+using ResourceManager.Data.Repos;
 using ResourceManager.Domain;
 using ResourceManager.Domain.Factories;
 
@@ -33,6 +34,9 @@ namespace ResourceManager
             services.AddDbContext<ManagerDbContext>(options => 
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")
             ));
+            services.AddTransient<ITenantRepo, TenantRepo>();
+
+            // TODO, mog¹ byæ do usuniêcia
             services.AddSingleton<IResourceFactory, ResourceFactory>();
             services.AddSingleton<ITenantsFactory, TenantsFactory>();
             services.AddSingleton<IFetchHelper, FetchHelper>();

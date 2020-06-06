@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ResourceManager.Data;
+using ResourceManager.Data.Repos;
 using ResourceManager.Domain.Factories;
 using ResourceManager.Domain.Models;
 using System;
@@ -15,15 +16,11 @@ namespace ResourceManager.Controllers
     [Route("tenants")]
     public class TenantsController : Controller, ITenantsController
     {
-        private ManagerDbContext _ctx;
-        private ITenantsFactory _factory;
-        private IFetchHelper _helper;
+        private ITenantRepo _repo;
 
-        public TenantsController(ManagerDbContext ctx, IFetchHelper helper, ITenantsFactory factory)
+        public TenantsController(ITenantRepo repo)
         {
-            _ctx = ctx;
-            _helper = helper;
-            _factory = factory;
+            _repo = repo;
         }
 
         [HttpPost]
@@ -34,7 +31,7 @@ namespace ResourceManager.Controllers
             if (Tenant == null)
                 return BadRequest("Incorrect data provided");
 
-            var lookup = _helper.GetTenant(Tenant.Id, _ctx);
+            var lookup = _repo.GetTenant(Tenant.Id);
 
             // Czy istnieje już Tenant z takim ID
             if (lookup != null)
@@ -51,9 +48,7 @@ namespace ResourceManager.Controllers
         /// <param name="Tenant"></param>
         public void AddTenant(ITenant Tenant)
         {
-            var tenant = _factory.CreateInstance(Tenant.Id, Tenant.Priority, "Tenant") as Tenant;
-            _ctx.Tenants.Add(tenant);
-            _ctx.SaveChanges();
+            _repo.AddTenant(Tenant);
         }
 
         [HttpDelete]
@@ -61,13 +56,10 @@ namespace ResourceManager.Controllers
         public ActionResult RemoveTenantAction(Guid Id)
         {
             // TODO zwolnij wszystkie wynajęte przez niego zasoby od razu.
-            if (_helper.GetTenant(Id, _ctx) == null)
+            if (_repo.GetTenant(Id) == null)
                 return BadRequest("Such a Tenant is missing.");
 
             RemoveTenant(Id);
-
-            _ctx.SaveChanges();
-
             return NoContent();
         }
 
@@ -77,16 +69,14 @@ namespace ResourceManager.Controllers
         /// <param name="Id"></param>
         public void RemoveTenant(Guid Id)
         {
-            _ctx.Tenants.Remove(_helper.GetTenant(Id, _ctx));
-            _ctx.SaveChanges();
+            _repo.WithdrawTenant(_repo.GetTenant(Id));
         }
 
         [HttpPatch]
         [Route("patch")]
         public ActionResult SetTenantsPriorityAction([FromBody] Tenant tenant)
         {
-            var tenantFromDb = _helper.GetTenant(tenant.Id, _ctx);
-            if (tenantFromDb == null)
+            if (_repo.GetTenant(tenant.Id) == null)
                 return BadRequest("Such a tenant is missing");
 
             SetTenantsPriority(tenant.Id, tenant.Priority);
@@ -94,13 +84,14 @@ namespace ResourceManager.Controllers
             return Ok($"Tenant with an ID of: {tenant.Id} has been updated with priority of: {tenant.Priority}");
         }
 
+        /// <summary>
+        /// Metoda wywoływana przez akcję kontrolera po sprawdzeniu błędnych scenariuszy
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <param name="NewPriority"></param>
         public void SetTenantsPriority(Guid Id, byte NewPriority)
         {
-            // ciągłe powtarzanie użycia metody GetTenantById wymuszone przez z góry ustalone w wymaganiach argumenty do metod interfejsu.
-            var tenant = _helper.GetTenant(Id, _ctx);
-            tenant.Priority = NewPriority;
-            _ctx.Update(tenant);
-            _ctx.SaveChanges();
+            _repo.SetTenantsPriority(_repo.GetTenant(Id), NewPriority);
         }
     }
 }
