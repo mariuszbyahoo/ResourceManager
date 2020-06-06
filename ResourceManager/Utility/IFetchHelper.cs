@@ -11,7 +11,8 @@ namespace ResourceManager
     {
         Tenant GetTenant(Guid Id, ManagerDbContext _ctx);
         Resource GetResource(Guid Id, ManagerDbContext _ctx);
-
         Resource[] GetResources(string variant, ManagerDbContext _ctx);
+
+        Resource[] GetAvailableResources(Resource[] resources);
     }
 }

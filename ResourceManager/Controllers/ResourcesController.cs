@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ResourceManager.Data;
+using ResourceManager.Domain.Enums;
 using ResourceManager.Domain.Factories;
 using ResourceManager.Domain.Models;
 
@@ -166,6 +167,10 @@ namespace ResourceManager.Controllers
             if (tenant == null)
                 return BadRequest("Not found any tenant with such an ID");
 
+            resource = _helper.GetAvailableResources(resources).FirstOrDefault();
+            if (resource == null)
+                return NotFound("Has not found any available resource with such a variant");
+
             if (LeaseResource(variant, tenant, DateTime.Now, out resource))
                 return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {ten}, and a message has been sent");
             else
@@ -184,9 +189,9 @@ namespace ResourceManager.Controllers
                     return false;
 
                 // Wybierz ten, który najdłużej leży odłogiem i jest wolny
-                resource = resources[0];
+                resource = _helper.GetAvailableResources(resources).FirstOrDefault();
 
-                resource.Availability = Domain.Enums.ResourceStatus.Occupied;
+                resource.Availability = ResourceStatus.Occupied;
                 resource.LeasedTo = tenant.Id;
 
                 _ctx.Update(resource);
