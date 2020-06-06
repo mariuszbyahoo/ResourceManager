@@ -19,8 +19,10 @@ namespace ResourceManager.Data.Repos
 
         public void AddResource(IResource resource, DateTime availableFromDate)
         {
-            // TODO Handle dates!
-            Ctx.Resources.Add(resource as Resource);
+            var res = resource as Resource;
+            res.OccupiedTill = availableFromDate;
+            res.Availability = ResourceStatus.Occupied;
+            Ctx.Resources.Add(res);
             Ctx.SaveChanges();
         }
 
@@ -40,8 +42,6 @@ namespace ResourceManager.Data.Repos
 
         public Resource GetResource(Guid id)
         {
-            // TODO handle this exception
-            // Throws error if duplicate
             return Ctx.Resources.Where(r => r.Id.Equals(id)).FirstOrDefault();
         }
 
@@ -52,6 +52,9 @@ namespace ResourceManager.Data.Repos
 
         public bool LeaseResource(IResource resource, ITenant tenant, DateTime date)
         {
+
+            // ODN DATY: WYDZIERŻAW Z CHWILĄ OBECNĄ, DO WSKAZANEJ DATY.
+
             resource.Availability = Domain.Enums.ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;
             Ctx.Update(resource);
@@ -68,6 +71,9 @@ namespace ResourceManager.Data.Repos
 
             // Wybierz ten, który najdłużej leży odłogiem i jest wolny
             resource = FilterUnavailableResources(resources).FirstOrDefault();
+
+
+            // ODN DATY: WYDZIERŻAW Z CHWILĄ OBECNĄ, DO WSKAZANEJ DATY.
 
             resource.Availability = ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;

@@ -11,5 +11,7 @@ namespace ResourceManager.Domain.Models
         public string Variant { get; set; }
         public ResourceStatus Availability { get; set; } = ResourceStatus.Available;
         public Guid LeasedTo { get; set; } = Guid.Empty;
+
+        public DateTime OccupiedTill { get; set; } = DateTime.MinValue;
     }
 }
