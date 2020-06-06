@@ -42,7 +42,7 @@ namespace ResourceManager.Data.Repos
         {
             // TODO handle this exception
             // Throws error if duplicate
-            return Ctx.Resources.Where(r => r.Id.Equals(id)).Single();
+            return Ctx.Resources.Where(r => r.Id.Equals(id)).FirstOrDefault();
         }
 
         public Resource[] GetResources(string variant)

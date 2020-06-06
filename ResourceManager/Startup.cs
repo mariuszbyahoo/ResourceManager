@@ -35,6 +35,7 @@ namespace ResourceManager
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")
             ));
             services.AddTransient<ITenantRepo, TenantRepo>();
+            services.AddTransient<IResourceRepo, ResourceRepo>();
 
             // TODO, mog¹ byæ do usuniêcia
             services.AddSingleton<IResourceFactory, ResourceFactory>();
