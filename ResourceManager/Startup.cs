@@ -10,7 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ResourceManager.Data;
 using ResourceManager.Data.Repos;
+using ResourceManager.Data.Services;
 using ResourceManager.Domain.Factories;
+using ResourceManager.Services;
 
 namespace ResourceManager
 {
@@ -30,9 +32,10 @@ namespace ResourceManager
             services.AddDbContext<ManagerDbContext>(options => 
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")
             ));
-            services.AddTransient<ITenantRepo, TenantRepo>();
-            services.AddTransient<IResourceRepo, ResourceRepo>();
-
+            services.AddScoped<ITenantRepo, TenantRepo>();
+            services.AddScoped<IResourceRepo, ResourceRepo>();
+            services.AddSingleton<IRemoveService, RemoveService>();
+            services.AddSingleton<ILoggerService, Logger>();
             services.AddSingleton<IResourceFactory, ResourceFactory>();
             services.AddSingleton<ITenantsFactory, TenantsFactory>();
         }

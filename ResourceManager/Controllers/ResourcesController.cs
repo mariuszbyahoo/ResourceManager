@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using ResourceManager.Data.Repos;
+using ResourceManager.Data.Services;
 using ResourceManager.Domain.Models;
 
 namespace ResourceManager.Controllers
@@ -19,13 +20,15 @@ namespace ResourceManager.Controllers
         private IResourceRepo _resources;
         private ITenantRepo _tenants;
         private IConfiguration _config;
+        private ILoggerService _logger;
         private string dateFormat;
 
-        public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config)
+        public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, ILoggerService logger)
         {
             _resources = resources;
             _tenants = tenants;
             _config = config;
+            _logger = logger;
             dateFormat = _config.GetSection("DateFormats").GetSection("Default").Value;
         }
 
@@ -74,14 +77,20 @@ namespace ResourceManager.Controllers
         // TODO zaimplementuj usunięcie z bazy w danym dniu. Sprawdź raz dziennie gdy godzina wynosi 00:00 czy to czas na usunięcie.
         public IActionResult WithdrawResourceAction(string withdrawalDate, Guid Id)
         {
-            IResource res = _resources.GetResource(Id);
+            var res = _resources.GetResource(Id);
             if (res == null)
                 return BadRequest("Resource with such an ID does not exist.");
 
             DateTime date;
             DateTime.TryParseExact(withdrawalDate, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
-            WithdrawResource(res, date);
+            // Jeśli zasób był zajęty w przeszłości
+            if (res.OccupiedTill < DateTime.Now && res.LeasedTo != Guid.Empty)
+                WithdrawResource(res, date);
+            else
+                /* TODO powiadom o zerwaniu umowy przez dostawcę i konieczności zwrotu zasobu do dostawcy ze skutkiem na dzień {date} */
+                // TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020
+                WithdrawResource(res, date);
 
             return NoContent();
         }
@@ -125,7 +134,6 @@ namespace ResourceManager.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when releasing the resource, check the 'errors.txt' file");
 
             // TODO notify the tenant !!
-
         }
 
         /// <summary>
@@ -144,7 +152,7 @@ namespace ResourceManager.Controllers
             }
             catch (Exception ex)
             {
-                LogErrorToFile(ex);
+                _logger.LogToFile(ex,"errors.txt");
                 return false;
             }
         }
@@ -193,7 +201,7 @@ namespace ResourceManager.Controllers
             }
             catch(Exception ex)
             {
-                LogErrorToFile(ex);
+                _logger.LogToFile(ex, "errors.txt");
                 return false;
             }
         }
@@ -262,24 +270,10 @@ namespace ResourceManager.Controllers
             }
             catch(Exception ex)
             {
-                LogErrorToFile(ex);
+                _logger.LogToFile(ex, "errors.txt");
                 resource = null;
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Metoda, logująca wyjątek do pliku "errors.txt" w folderze bin/debug projektu
-        /// </summary>
-        /// <param name="ex">Wyjątek, który ma zostać zalogowany do pliku</param>
-        public void LogErrorToFile(Exception ex)
-        {
-            var w = new StreamWriter("errors.txt");
-            w.Write("\r\nLog Entry : ");
-            w.WriteLine($"{DateTime.Now.ToLongTimeString()} {DateTime.Now.ToLongDateString()}");
-            w.WriteLine("  :");
-            w.WriteLine($"  :{ex.Message}");
-            w.WriteLine("-------------------------------");
         }
 
         /// <summary>

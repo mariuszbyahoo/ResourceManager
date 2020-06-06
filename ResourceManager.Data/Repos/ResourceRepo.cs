@@ -1,20 +1,28 @@
-﻿using ResourceManager.Domain.Enums;
+﻿using ResourceManager.Data.Services;
+using ResourceManager.Domain.Enums;
 using ResourceManager.Domain.Factories;
 using ResourceManager.Domain.Models;
+using ResourceManager.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ResourceManager.Data.Repos
 {
     public class ResourceRepo : IResourceRepo
     {
         public ManagerDbContext Ctx { get; set; }
+        private IRemoveService removeService;
+        private ILoggerService _logger;
 
-        public ResourceRepo(ManagerDbContext ctx)
+        public ResourceRepo(ManagerDbContext ctx, IRemoveService service, ILoggerService logger)
         {
             Ctx = ctx;
+            removeService = service;
+            _logger = logger;
         }
 
         public void AddResource(IResource resource, DateTime availableFromDate)
@@ -69,7 +77,6 @@ namespace ResourceManager.Data.Repos
             if (resources.Length == 0)
                 return null;
 
-            // Wybierz ten, który najdłużej leży odłogiem i jest wolny
             resource = FilterUnavailableResources(resources).FirstOrDefault();
 
 
@@ -83,11 +90,24 @@ namespace ResourceManager.Data.Repos
             return resource;
         }
 
-        public void WithdrawResource(IResource resource, DateTime withdrawedOnDate)
+        /// <summary>
+        /// Metoda uruchamiana na innym wątku, w momencie, gdy nadejdzie wskazana data usunięcia zasobu, wtedy go usunie
+        /// </summary>
+        /// <param name="resource"></param>
+        /// <param name="withdrawedOnDate"></param>
+        public async void WithdrawResource(IResource resource, DateTime withdrawedOnDate)
         {
-            // TODO handle the dates
-            Ctx.Resources.Remove(resource as Resource);
-            Ctx.SaveChanges();
+            // TODO Metoda poprawnie w przypadku wyrzucenia wyjątku jak najbardziej loguje go do pliku, ale API zwraca 204 że niby ok, więc jak to zrobić żeby było ok skoro tutaj musi być void?
+            try
+            {
+                var res = await removeService.CheckDate(withdrawedOnDate);
+                Ctx.Resources.Remove(resource as Resource);
+                Ctx.SaveChanges();
+            }
+            catch(Exception ex)
+            {
+                await _logger.LogToFile(ex, "errors.txt");
+            }
         }
     }
 }
