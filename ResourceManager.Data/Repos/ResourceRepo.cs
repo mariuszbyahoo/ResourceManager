@@ -33,7 +33,7 @@ namespace ResourceManager.Data.Repos
             return true;
         }
 
-        public Resource[] GetAvailableResources(Resource[] resources)
+        public Resource[] FilterUnavailableResources(Resource[] resources)
         {
             return resources.Where(r => r.Availability.Equals(ResourceStatus.Available)).ToArray();
         }
@@ -67,7 +67,7 @@ namespace ResourceManager.Data.Repos
                 return null;
 
             // Wybierz ten, który najdłużej leży odłogiem i jest wolny
-            resource = GetAvailableResources(resources).FirstOrDefault();
+            resource = FilterUnavailableResources(resources).FirstOrDefault();
 
             resource.Availability = ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;

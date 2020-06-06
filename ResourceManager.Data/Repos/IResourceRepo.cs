@@ -11,7 +11,7 @@ namespace ResourceManager.Data.Repos
         public ManagerDbContext Ctx { get; set; }
         Resource GetResource(Guid id);
         Resource[] GetResources(string variant);
-        Resource[] GetAvailableResources(Resource[] resources);
+        Resource[] FilterUnavailableResources(Resource[] resources);
 
         void AddResource(IResource resource, DateTime availableFromDate);
         void WithdrawResource(IResource resource, DateTime withdrawedOnDate);

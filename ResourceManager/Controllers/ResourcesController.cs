@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using ResourceManager.Data;
-using ResourceManager.Domain.Enums;
-using ResourceManager.Domain.Factories;
+using ResourceManager.Data.Repos;
 using ResourceManager.Domain.Models;
 
 namespace ResourceManager.Controllers
@@ -18,15 +14,13 @@ namespace ResourceManager.Controllers
     [Route("resources")]
     public class ResourcesController : Controller, IController
     {
-        private ManagerDbContext _ctx;
-        private IResourceFactory _factory;
-        private IFetchHelper _helper;
+        private IResourceRepo _resources;
+        private ITenantRepo _tenants;
 
-        public ResourcesController(ManagerDbContext ctx, IFetchHelper helper, IResourceFactory factory)
+        public ResourcesController(IResourceRepo resources, ITenantRepo tenants)
         {
-            _ctx = ctx;
-            _helper = helper;
-            _factory = factory;
+            _resources = resources;
+            _tenants = tenants;
         }
 
         [HttpPost]
@@ -36,8 +30,7 @@ namespace ResourceManager.Controllers
             if (resource == null)
                 return BadRequest("Incorrect data provided");
 
-            var lookup = _helper.GetResource(resource.Id, _ctx);
-            if (lookup != null)
+            if (_resources.GetResource(resource.Id) != null)
                 return BadRequest("Resource with such an ID already exists");
 
             // O CO CHODZI Z TYMI DATAMI??? >>>==--> SPRAWDŹ
@@ -49,16 +42,14 @@ namespace ResourceManager.Controllers
 
         public void AddResource(IResource resource, DateTime fromDate)
         {
-            var res = _factory.CreateInstance(resource.Id, resource.Variant, "Resource") as Resource;
-            _ctx.Resources.Add(res);
-            _ctx.SaveChanges();
+            _resources.AddResource(resource, fromDate);
         }
 
         [HttpDelete]
         [Route("delete/{Id}")]
         public IActionResult WithdrawResourceAction(Guid Id)
         {
-            var res = _helper.GetResource(Id, _ctx);
+            IResource res = _resources.GetResource(Id);
             if (res == null)
                 return BadRequest("Resource with such an ID does not exist.");
 
@@ -70,19 +61,17 @@ namespace ResourceManager.Controllers
         public void WithdrawResource(IResource resource, DateTime fromDate)
         {
             // Do something with those dates!!!
-            var res = _ctx.Resources.Where(res => res.Id.Equals(resource.Id)).FirstOrDefault();
-            _ctx.Resources.Remove(res);
-            _ctx.SaveChanges();
+            _resources.WithdrawResource(resource, fromDate);
         }
 
         [HttpPatch]
         [Route("free")]
         public ActionResult FreeResourceAction(Guid res, Guid ten)
         {
-            var resource = _helper.GetResource(res, _ctx);
+            var resource = _resources.GetResource(res);
             if (resource == null)
                 return BadRequest($"Resource with an ID of: {res} is missing");
-            var tenant = _ctx.Tenants.Where(tenant => tenant.Id.Equals(ten)).FirstOrDefault();
+            var tenant = _tenants.GetTenant(ten);
             if (tenant == null)
                 return BadRequest($"Tenant with an ID of: {ten} is missing");
             if (!resource.LeasedTo.Equals(tenant.Id))
@@ -102,14 +91,11 @@ namespace ResourceManager.Controllers
         {
             try
             {
-                resource.Availability = Domain.Enums.ResourceStatus.Available;
-                resource.LeasedTo = Guid.Empty;
-                _ctx.Update(resource);
-                _ctx.SaveChanges();
-                // send a message to Tenant
-                // do something with the date
-                return true;
-            } catch (Exception ex)
+                // TODO send a message to Tenant
+                // TODO do something with the date
+                return _resources.FreeResource(resource, tenant, date);
+            }
+            catch (Exception ex)
             {
                 LogErrorToFile(ex);
                 return false;
@@ -120,10 +106,10 @@ namespace ResourceManager.Controllers
         [Route("lease")]
         public IActionResult LeaseResourceAction(Guid res, Guid ten) 
         {
-            var resource = _helper.GetResource(res, _ctx);
+            var resource = _resources.GetResource(res);
             if (resource == null)
                 return BadRequest("Resource with such an ID is missing");
-            var tenant = _helper.GetTenant(ten, _ctx);
+            var tenant = _tenants.GetTenant(ten);
             if (tenant == null)
                 return BadRequest("Resource with such an ID is missing");
             if (!resource.LeasedTo.Equals(Guid.Empty))
@@ -139,11 +125,7 @@ namespace ResourceManager.Controllers
         {
             try
             {
-                resource.Availability = Domain.Enums.ResourceStatus.Occupied;
-                resource.LeasedTo = tenant.Id;
-                _ctx.Update(resource);
-                _ctx.SaveChanges();
-                return true;
+                return _resources.LeaseResource(resource, tenant, date);
             }
             catch(Exception ex)
             {
@@ -158,16 +140,16 @@ namespace ResourceManager.Controllers
         {
             IResource resource;
             // zrób coś z null-checkiem co do zasobów, przemieść go np. do metody poniżej.
-            var resources = _helper.GetResources(variant, _ctx);
+            var resources = _resources.GetResources(variant);
             if (resources.Length == 0)
                 return NotFound("Not found any resources with such a variant.");
             // **************************************
-            var tenant = _helper.GetTenant(ten, _ctx);
+            var tenant = _tenants.GetTenant(ten);
             // opisz w mailu czemu tu NotFound a innym razem BadRequest
             if (tenant == null)
                 return BadRequest("Not found any tenant with such an ID");
 
-            resource = _helper.GetAvailableResources(resources).FirstOrDefault();
+            resource = _resources.FilterUnavailableResources(resources).FirstOrDefault();
             if (resource == null)
                 return NotFound("Has not found any available resource with such a variant");
 
@@ -184,20 +166,16 @@ namespace ResourceManager.Controllers
             try
             {
                 resource = null;
-                var resources = _helper.GetResources(variant, _ctx);
+                var resources = _resources.GetResources(variant);
                 if (resources.Length == 0)
                     return false;
 
                 // Wybierz ten, który najdłużej leży odłogiem i jest wolny
-                resource = _helper.GetAvailableResources(resources).FirstOrDefault();
+                resource = _resources.FilterUnavailableResources(resources).FirstOrDefault();
+                if (resource == null)
+                    return false;
 
-                resource.Availability = ResourceStatus.Occupied;
-                resource.LeasedTo = tenant.Id;
-
-                _ctx.Update(resource);
-                _ctx.SaveChanges();
-
-                return true;
+                return _resources.LeaseResource(resource, tenant, date);
             }
             catch(Exception ex)
             {
@@ -219,7 +197,7 @@ namespace ResourceManager.Controllers
 
         private IActionResult ResolveTenantsConflict(IResource resource, ITenant tenant)
         {
-                var concurrent = _helper.GetTenant(resource.LeasedTo, _ctx);
+                var concurrent = _tenants.GetTenant(resource.LeasedTo);
                 if (concurrent == null)
                     return StatusCode(StatusCodes.Status500InternalServerError, "Resource is leased to tenant which is not existing anymore, an error occured.");
                 if (concurrent.Priority < tenant.Priority)
