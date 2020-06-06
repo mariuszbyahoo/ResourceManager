@@ -28,6 +28,8 @@ namespace ResourceManager.Domain.Models
 		/// <summary>
 		/// Identyfikator dzierżawcy 
 		/// </summary>
-		public Guid LeasedTo { get; set; }
+		Guid LeasedTo { get; set; }
+
+		public DateTime OccupiedTill { get; set; }
 	}
 }

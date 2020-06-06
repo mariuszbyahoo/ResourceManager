@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using ResourceManager.Data.Repos;
 using ResourceManager.Data.Services;
+using ResourceManager.Domain.Enums;
 using ResourceManager.Domain.Models;
 
 namespace ResourceManager.Controllers
@@ -74,7 +75,6 @@ namespace ResourceManager.Controllers
         /// <returns></returns>
         [HttpDelete]
         [Route("delete")]
-        // TODO zaimplementuj usunięcie z bazy w danym dniu. Sprawdź raz dziennie gdy godzina wynosi 00:00 czy to czas na usunięcie.
         public IActionResult WithdrawResourceAction(string withdrawalDate, Guid Id)
         {
             var res = _resources.GetResource(Id);
@@ -87,9 +87,9 @@ namespace ResourceManager.Controllers
             // Jeśli zasób był zajęty w przeszłości
             if (res.OccupiedTill < DateTime.Now && res.LeasedTo != Guid.Empty)
                 WithdrawResource(res, date);
-            else
-                /* TODO powiadom o zerwaniu umowy przez dostawcę i konieczności zwrotu zasobu do dostawcy ze skutkiem na dzień {date} */
-                // TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020
+            else 
+                /* TODO powiadom o zerwaniu umowy przez dostawcę i konieczności zwrotu zasobu do dostawcy ze skutkiem na dzień {date}
+                 TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
                 WithdrawResource(res, date);
 
             return NoContent();
@@ -124,14 +124,22 @@ namespace ResourceManager.Controllers
                 return BadRequest($"Tenant with an ID of: {ten} is missing");
             if (!resource.LeasedTo.Equals(tenant.Id))
                 return BadRequest($"Resource with ID of:{resource.Id} not belongs to tenant with ID of: {tenant.Id}");
+            if (resource.Availability.Equals(ResourceStatus.Available))
+                return BadRequest("This resource is already available, wrong reource ID provided");
 
             DateTime date;
             DateTime.TryParseExact(availableFrom, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+            if (resource.OccupiedTill < date)
+                return BadRequest("Resource will be available at the specified date, maybe wrong date provided?");
 
-            if (FreeResource(resource, tenant, date))
+                if (FreeResource(resource, tenant, date))
                 return Ok($"Resource with an ID of:{res} released, and message has been sent succesfully to tenant with an ID of:{ten}");
             else
+            {
+                // ręcznie zwracam kod odpowiedzi, by nie terminować działania programu i jednocześnie poinformować użytkownika API o błędzie.
+                // Który z kolei jest logowany w metodzie poniżej
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when releasing the resource, check the 'errors.txt' file");
+            }
 
             // TODO notify the tenant !!
         }
@@ -162,11 +170,11 @@ namespace ResourceManager.Controllers
         /// </summary>
         /// <param name="res">Przedmiot działania metody</param>
         /// <param name="ten">Dzierżawca wnoszący o dzierżawę</param>
-        /// <param name="availableFrom">Data, do której będzie trwać dzierżawa: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób będzie wydzierżawiony przez wnoszącego)</param>
+        /// <param name="leasedTill">Data, do której będzie trwać dzierżawa: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób będzie wydzierżawiony przez wnoszącego)</param>
         /// <returns></returns>
         [HttpPatch]
         [Route("lease")]
-        public IActionResult LeaseResourceAction(Guid res, Guid ten, string availableFrom) 
+        public IActionResult LeaseResourceAction(Guid res, Guid ten, string leasedTill) 
         {
             var resource = _resources.GetResource(res);
             if (resource == null)
@@ -177,8 +185,10 @@ namespace ResourceManager.Controllers
             if (!resource.LeasedTo.Equals(Guid.Empty))
                 return ResolveTenantsConflict(resource, tenant);
 
+            //TODO *************** Dodaj TenantsConflict w razie gdyby zasób był obecnie dzierżawiony *********
+
             DateTime date;
-            DateTime.TryParseExact(availableFrom, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+            DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
             if (LeaseResource(resource, tenant, date))
                 return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");

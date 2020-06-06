@@ -38,6 +38,7 @@ namespace ResourceManager.Data.Repos
         {
             resource.Availability = Domain.Enums.ResourceStatus.Available;
             resource.LeasedTo = Guid.Empty;
+            resource.OccupiedTill = date; 
             Ctx.Update(resource);
             Ctx.SaveChanges();
             return true;
@@ -65,6 +66,7 @@ namespace ResourceManager.Data.Repos
 
             resource.Availability = Domain.Enums.ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;
+            resource.OccupiedTill = date;
             Ctx.Update(resource);
             Ctx.SaveChanges();
             return true;
@@ -72,16 +74,14 @@ namespace ResourceManager.Data.Repos
 
         public IResource LeaseResource(string variant, ITenant tenant, DateTime date)
         {
-            IResource resource;
             var resources = GetResources(variant);
             if (resources.Length == 0)
                 return null;
 
-            resource = FilterUnavailableResources(resources).FirstOrDefault();
-
+            var resource = FilterUnavailableResources(resources).FirstOrDefault();
 
             // ODN DATY: WYDZIERŻAW Z CHWILĄ OBECNĄ, DO WSKAZANEJ DATY.
-
+            resource.OccupiedTill = date;
             resource.Availability = ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;
 
