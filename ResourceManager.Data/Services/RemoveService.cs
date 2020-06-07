@@ -30,7 +30,7 @@ namespace ResourceManager.Services
                 else
                 {
                     await _logger.LogToFile($"Log INFO entry: {DateTime.Now}:: Checked the date, awaiting further", "info.txt");
-                    Thread.Sleep(new TimeSpan(3, 0, 0));
+                    Thread.Sleep(new TimeSpan(6, 0, 0)); // sprawdza co sześć godzin
                 }
             }
             throw new InvalidOperationException("CheckDate method shouldn't get here!!");
