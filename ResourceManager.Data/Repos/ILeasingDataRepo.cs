@@ -16,5 +16,6 @@ namespace ResourceManager.Data.Repos
         public ITenantData GetDataAboutTenant(Guid tenantId);
         public IResourceData GetDataAboutResource(Guid resourceId);
         public IActionResult SetDataAboutResource(Guid resourceId, IResourceData newData);
+        public Task<IActionResult> WithdrawResourceData(Guid id, DateTime fromDate);
     }
 }

@@ -13,9 +13,11 @@ namespace ResourceManager.Domain.Factories
         /// </summary>
         /// <param name="resourceId"></param>
         /// <param name="occupiedTill"></param>
+        /// <param name="tenant">Jeśli skracamy okres dostarczenia zasobu do puli, należy przekazać w tym miejscu null</param>
         /// <returns></returns>
-        public IResourceData CreateInstance(Guid resourceId, DateTime occupiedTill, string typeName)
+        public IResourceData CreateInstance(Guid resourceId, DateTime occupiedTill, ITenant tenant, string typeName)
         {
+            Guid leasedTo = (tenant != null) ? tenant.Id : Guid.Empty;
             switch (typeName)
             {
                 case "ResourceData":
@@ -25,7 +27,7 @@ namespace ResourceManager.Domain.Factories
                         status = ResourceStatus.Occupied;
                     else
                         status = ResourceStatus.Available;
-                    return new ResourceData() { Id = resourceId, Availability = status, LeasedTo = Guid.Empty, OccupiedTill = occupiedTill };
+                    return new ResourceData() { Id = resourceId, Availability = status, LeasedTo = leasedTo, OccupiedTill = occupiedTill };
 
                 default:
                     throw new InvalidOperationException();

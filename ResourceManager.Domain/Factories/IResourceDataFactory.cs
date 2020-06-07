@@ -8,6 +8,6 @@ namespace ResourceManager.Domain.Factories
 {
     public interface IResourceDataFactory
     {
-        IResourceData CreateInstance(Guid resourceId, DateTime occupiedTill, string typeName);
+        IResourceData CreateInstance(Guid resourceId, DateTime occupiedTill, ITenant? tenant, string typeName);
     }
 }

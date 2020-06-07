@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using ResourceManager.Data.Services;
 using ResourceManager.Domain.Models;
+using ResourceManager.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,9 +17,14 @@ namespace ResourceManager.Data.Repos
     {
         public ManagerDbContext Context { get; set; }
 
-        public LeasingDataRepo(ManagerDbContext context)
+        private IRemoveService _removeService;
+        private ILoggerService _logger;
+
+        public LeasingDataRepo(ManagerDbContext context, IRemoveService removeService, ILoggerService logger)
         {
             Context = context;
+            _removeService = removeService;
+            _logger = logger;
         }
 
         public async Task<IActionResult> AddDataAboutResource(IResourceData resourceData)
@@ -54,6 +62,22 @@ namespace ResourceManager.Data.Repos
             processed.OccupiedTill = newData.OccupiedTill;
 
             return new OkObjectResult(0);
+        }
+
+        public async Task<IActionResult> WithdrawResourceData(Guid id, DateTime fromDate)
+        {
+            try
+            {
+                var res = await _removeService.CheckDate(fromDate);
+                Context.ResourceDatas.Remove(GetDataAboutResource(id) as ResourceData);
+                Context.SaveChanges();
+                return new OkObjectResult(0);
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogToFile(ex, "errors.txt");
+                return new StatusCodeResult(500);
+            }
         }
     }
 }

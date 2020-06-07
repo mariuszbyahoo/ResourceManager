@@ -77,7 +77,7 @@ namespace ResourceManager.Controllers
         public void AddResource(IResource resource, DateTime fromDate)
         {
             // TODO zaimplementuj poniższą linię w każdej metodzie poniżej.
-            _leasingDatas.AddDataAboutResource(_resourceDataFactory.CreateInstance(resource.Id, fromDate, "ResourceData"));
+            _leasingDatas.AddDataAboutResource(_resourceDataFactory.CreateInstance(resource.Id, fromDate, null, "ResourceData"));
             _resources.AddResource(resource, fromDate);
         }
 
@@ -98,21 +98,25 @@ namespace ResourceManager.Controllers
             DateTime dateOfWithdrawal;
             DateTime.TryParseExact(withdrawalDate, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out dateOfWithdrawal);
 
-            // Jeśli zasób był zajęty w przeszłości
-            if (res.OccupiedTill < DateTime.Now && res.LeasedTo != Guid.Empty)
+            // Jeśli zasób był zajęty w przeszłości, czyli teraz jest wolny, ORAZ nie ma nikogo do niego przyporządkowanego,
+            // to...
+            if ((res.OccupiedTill < DateTime.Now) && (!res.LeasedTo.Equals(Guid.Empty)))
             {
                 WithdrawResource(res, dateOfWithdrawal);
             }
-            else
+            else // jeśli nie, to jest zajęty, i wtedy....
             {
-                // jeśli zostanie zwolniony przed usunięciem z puli, to nie ma co wysyłać maila
+                // jeśli będzie wycofany w momencie w którym jest dzierżawiony, to wyślij maila
                 if (res.OccupiedTill > dateOfWithdrawal)
                 {
-                    // TODO Dorób serwis, odpowiadający za wybranie adresu e-mail z tabeli w DB
-                    await _email.NotifyByEmail(res.LeasedTo, "mariusz.budzisz@yahoo.com", 
-                        $"Zerwano umowę dzierżawy ze skutkiem na dzień {dateOfWithdrawal.Date}.", 
-                        $"Dotyczy zasobu o ID: {res.Id}", _config);
+                    if(!res.LeasedTo.Equals(Guid.Empty))
+                    // Niniejsza pozagnieżdżana ifologia gwarantuje, że aplikacja nie wyrzuci NullReferenceException w linii 115
+                        await _email.NotifyByEmail(res.LeasedTo,
+                            _leasingDatas.GetDataAboutTenant(res.LeasedTo).EmailAddress, 
+                            $"Zerwano umowę dzierżawy ze skutkiem na dzień {dateOfWithdrawal.Date}.", 
+                            $"Dotyczy zasobu o ID: {res.Id}", _config);
                 }
+                // Jeśli nie będzie aktualnie zajęty, to nie ma co wysyłać maila.
                 /* TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
                 WithdrawResource(res, dateOfWithdrawal);
             }
@@ -126,6 +130,7 @@ namespace ResourceManager.Controllers
         /// <param name="fromDate">Data, z którą zasób zostanie usunięty: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób zostanie usunięty)</param>
         public void WithdrawResource(IResource resource, DateTime fromDate)
         {
+            _leasingDatas.WithdrawResourceData(resource.Id, fromDate);
             _resources.WithdrawResource(resource, fromDate);
         }
 

@@ -33,7 +33,8 @@ namespace ResourceManager.Services
                     Thread.Sleep(new TimeSpan(6, 0, 0)); // sprawdza co sześć godzin
                 }
             }
-            throw new InvalidOperationException("CheckDate method shouldn't get here!!");
+            // Jeśli wyznaczono usunięcie na dziś dociera tutaj.
+            return true;
         }
     }
 }
