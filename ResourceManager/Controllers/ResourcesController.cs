@@ -93,7 +93,7 @@ namespace ResourceManager.Controllers
         {
             var res = _resources.GetResource(Id);
             if (res == null)
-                return BadRequest("Resource with such an ID does not exist.");
+                return NotFound("Resource with such an ID does not exist.");
 
             DateTime dateOfWithdrawal;
             DateTime.TryParseExact(withdrawalDate, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out dateOfWithdrawal);
@@ -155,24 +155,21 @@ namespace ResourceManager.Controllers
         {
             DateTime date;
             DateTime.TryParseExact(availableFrom, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
-
             if (_resources.GetResource(res) == null)
-                return BadRequest($"Resource with an ID of: {res} is missing");
+                return NotFound($"Resource with an ID of: {res} is missing");
 
-            var resourceData = _resourceDataFactory.CreateInstance(res, date, _tenants.GetTenant(ten), "ResourceData");
-
-            if (resourceData.OccupiedTill < date)
+            var newResourceData = _resourceDataFactory.CreateInstance(res, date, _tenants.GetTenant(ten), "ResourceData");
+            var acquiredResourceData = _leasingDatas.GetDataAboutResource(res);
+            if (acquiredResourceData.OccupiedTill < date)
                 return BadRequest("Resource will be available at the specified date, maybe wrong date provided?");
             var tenant = _tenants.GetTenant(ten);
             if (tenant == null)
-                return BadRequest($"Tenant with an ID of: {ten} is missing");
+                return NotFound($"Tenant with an ID of: {ten} is missing");
             /* IF o którym mowa w Docsach do metody */
-            if ((!resourceData.LeasedTo.Equals(tenant.Id)) && (!resourceData.LeasedTo.Equals(Guid.Empty)))
-                return BadRequest($"Resource with ID of:{resourceData.Id} not belongs to tenant with ID of: {tenant.Id}");
-            if (resourceData.Availability.Equals(ResourceStatus.Available))
+            if ((!newResourceData.LeasedTo.Equals(tenant.Id)) && (!newResourceData.LeasedTo.Equals(Guid.Empty)))
+                return BadRequest($"Resource with ID of:{newResourceData.Id} not belongs to tenant with ID of: {tenant.Id}");
+            if (acquiredResourceData.OccupiedTill < DateTime.Now)
                 return BadRequest("This resource is already available, wrong reource ID provided");
-
-            // No a co jeśli zasób nie jest dzierżawiony ale ma być udostępniony wcześniej?
 
             if (FreeResource(_resources.GetResource(res), tenant, date))
             {
@@ -184,6 +181,7 @@ namespace ResourceManager.Controllers
                 /* wejście programu do tego bloku kodu oznacza, że podczas zwalniania zasobu wystąpił wyjątek:
                 ręcznie zwracam kod odpowiedzi, by nie terminować działania programu i jednocześnie poinformować użytkownika API o błędzie.
                 Który z kolei jest logowany w metodzie poniżej */
+                _logger.LogToFile("Something went bad, inspect ResourceController at lines 154-178", "errors.txt");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when releasing the resource, check the 'errors.txt' file");
             }
         }
@@ -234,22 +232,40 @@ namespace ResourceManager.Controllers
         public IActionResult LeaseResourceAction(Guid res, Guid ten, string leasedTill) 
         {
             var resource = _resources.GetResource(res);
-            if (resource == null)
-                return BadRequest("Resource with such an ID is missing");
-            var tenant = _tenants.GetTenant(ten);
+            var resourceData = _leasingDatas.GetDataAboutResource(res);
+            if (resourceData == null)
+                return NotFound("Resource with such an ID is missing");
+            var tenant = _tenants.GetTenant(ten); // TODO change it to TenantData object
             if (tenant == null)
-                return BadRequest("Resource with such an ID is missing");
+                return NotFound("Tenant with such an ID is missing");
 
             DateTime date;
             DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
-            if (!resource.LeasedTo.Equals(Guid.Empty) && resource.OccupiedTill > DateTime.Now)
+            if (!resourceData.LeasedTo.Equals(Guid.Empty) && resourceData.OccupiedTill > DateTime.Now) 
                 return ResolveTenantsConflict(resource, tenant, date);
+            if (resourceData.OccupiedTill > DateTime.Now)
+                return NotFound($"Requested Resource is not available to anyone at the time... come back at {resourceData.OccupiedTill}");
 
             if (LeaseResource(resource, tenant, date))
-                return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
+            {
+                if (_leasingDatas.SetDataAboutResource(res, _resourceDataFactory.CreateInstance(res, date, tenant, "ResourceData"))
+                    .GetType().Equals(typeof(OkObjectResult)))
+                {
+                    // TODO implement email notification
+                    return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
+                }
+                else
+                {
+                    _logger.LogToFile("Something went wrong while updating ResourceData, inspect ResourcesController, line 252",
+                        "errors.txt");
+                    return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+                }
+            }
             else
+            {
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
+            }
         }
 
         /// <summary>
