@@ -27,7 +27,6 @@ namespace ResourceManager.Controllers
         private ILoggerService _logger;
         private IEmailService _email;
         private IResourceDataFactory _resourceDataFactory;
-        private ITenantDataFactory _tenantDataFactory;
         private string dateFormat;
 
         public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, 
@@ -40,7 +39,6 @@ namespace ResourceManager.Controllers
             _logger = logger;
             _email = email;
             _resourceDataFactory = resourceDataFactory;
-            _tenantDataFactory = tenantDataFactory;
             _leasingDatas = leasingDatas;
             dateFormat = _config.GetSection("DateFormats").GetSection("Default").Value;
         }
@@ -249,21 +247,13 @@ namespace ResourceManager.Controllers
 
             if (LeaseResource(resource, tenant, date))
             {
-                if (_leasingDatas.SetDataAboutResource(res, _resourceDataFactory.CreateInstance(res, date, tenant, "ResourceData"))
-                    .GetType().Equals(typeof(OkObjectResult)))
-                {
+
                     // TODO implement email notification
-                    return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
-                }
-                else
-                {
-                    _logger.LogToFile("Something went wrong while updating ResourceData, inspect ResourcesController, line 252",
-                        "errors.txt");
-                    return new StatusCodeResult(StatusCodes.Status500InternalServerError);
-                }
+                return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
             }
             else
             {
+                _logger.LogToFile("An error occured when leasing the resource, check the 'errors.txt' file", "errors.txt");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
             }
         }
@@ -279,7 +269,15 @@ namespace ResourceManager.Controllers
         {
             try
             {
-                return _resources.LeaseResource(resource, tenant, date);
+                if (_leasingDatas.SetDataAboutResource(resource.Id, _resourceDataFactory.CreateInstance(resource.Id, date, tenant, "ResourceData"))
+                    .GetType().Equals(typeof(OkObjectResult))) 
+                {
+                    return _resources.LeaseResource(resource, tenant, date);
+                }
+                else
+                {
+                    throw new Exception("Something went bad when setting ResourceDatas table, inspect ResourcesController, line 274");
+                }
             }
             catch(Exception ex)
             {
@@ -298,7 +296,6 @@ namespace ResourceManager.Controllers
         /// <returns></returns>
         [HttpPatch]
         [Route("lease/any")]
-        // TODO dokończ kwestię data handlingu
         public ActionResult LeaseResourceAction(string variant, Guid ten, string leasedTill)
         {
             IResource resource;
@@ -306,9 +303,8 @@ namespace ResourceManager.Controllers
             if (resources.Length == 0)
                 return NotFound("Not found any resources with such a variant.");
             var tenant = _tenants.GetTenant(ten);
-            // TODO opisz w mailu czemu tu NotFound a innym razem BadRequest
             if (tenant == null)
-                return BadRequest("Not found any tenant with such an ID");
+                return NotFound("Not found any tenant with such an ID");
 
             resource = _resources.FilterUnavailableResources(resources).FirstOrDefault();
             if (resource == null)
@@ -320,7 +316,7 @@ namespace ResourceManager.Controllers
             if (LeaseResource(variant, tenant, date, out resource))
                 return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {ten}, and a message has been sent");
             else
-                // Nie wyrzucam wyjątku, zamiast tego sygnalizuję, że coś poszło nie tak, ponieważ kod nie powinien tu dotrzeć w ogóle po sprawdzeniu możliwych scenariuszy negatywnych.
+                _logger.LogToFile("Something went bad when setting ResourceDatas table, inspect ResourcesController, line 302", "errors.txt");
                 return StatusCode(StatusCodes.Status500InternalServerError, "Something went bad during lease granting process occured when leasing the resource, check the 'errors.txt' file");
         }
 
@@ -372,11 +368,16 @@ namespace ResourceManager.Controllers
                     return StatusCode(StatusCodes.Status500InternalServerError, "Resource is leased to tenant which is not existing anymore, an error occured.");
                 if (concurrent.Priority < tenant.Priority)
                 {
-                // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
+                    // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
                     if (LeaseResource(resource, tenant, leaseTill))
+                    {
                         return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and a message has been sent, the resource has been expropriated from a user with an ID of {concurrent.Id}");
+                    }
                     else
+                    {
+                        _logger.LogToFile("Something went bad when resolving the tenants conflict, inspect ResourcesController, line 368", "errors.txt");
                         return StatusCode(StatusCodes.Status500InternalServerError, "Somehow cannot lease the resource, check the 'errors.txt' file");
+                    }
                 }
                 return NotFound("Resource with such an ID is already leased by a tenant with higher priority");
         }
