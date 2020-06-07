@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ResourceManager.Data.Repos;
+using ResourceManager.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,36 +10,34 @@ namespace ResourceManager.Data.Services
 {
     public class LeasingDataService : ILeasingDataService
     {
-        private IResourceRepo _resources;
-        private ITenantRepo _tenants;
+        private ILeasingDataRepo _repo;
 
-        public LeasingDataService(IResourceRepo resources, ITenantRepo tenants)
+        public LeasingDataService(ILeasingDataRepo repo)
         {
-            _resources = resources;
-            _tenants = tenants;
+            _repo = repo;
         }
 
-        public Task<IActionResult> AddResource(Guid resourceId, DateTime date)
+        Task<ActionResult<string>> ILeasingDataService.GetTenantsEmail(Guid tenantsId)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IActionResult> FreeResource(Guid resourceId, Guid tenantsId, DateTime date)
+        Task ILeasingDataService.AddResource(Guid resourceId, DateTime date)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IActionResult> GetTenantsEmail(Guid tenantsId)
+        Task ILeasingDataService.WithdrawResource(Guid resourceId, DateTime date)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IActionResult> LeaseResource(Guid resourceId, Guid tenantsId, DateTime date)
+        Task<ActionResult<IResource>> ILeasingDataService.LeaseResource(Guid resourceId, Guid tenantsId, DateTime date)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IActionResult> WithdrawResource(Guid resourceId, DateTime date)
+        Task<ActionResult<IResource>> ILeasingDataService.FreeResource(Guid resourceId, Guid tenantsId, DateTime date)
         {
             throw new NotImplementedException();
         }

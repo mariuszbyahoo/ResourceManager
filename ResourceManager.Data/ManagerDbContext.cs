@@ -16,6 +16,16 @@ namespace ResourceManager.Data
         /// </summary>
         public DbSet<Tenant> Tenants { get; set; }
 
+        /// <summary>
+        /// Zbiór rekordów zaw dane odn zasobów
+        /// </summary>
+        public DbSet<ResourceData> ResourceDatas { get; set; }
+
+        /// <summary>
+        /// Zbiór rekordów zaw dane odn dzierżawców
+        /// </summary>
+        public DbSet<TenantData> TenantDatas { get; set; }
+
         public ManagerDbContext(DbContextOptions<ManagerDbContext> options) : base(options)
         {
 

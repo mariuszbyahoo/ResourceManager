@@ -6,6 +6,7 @@ namespace ResourceManager.Domain.Models
 {
     public interface ITenantData
     {
+        Guid Id { get; set; }
         string EmailAddress { get; set; }
     }
 }

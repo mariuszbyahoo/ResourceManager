@@ -1,6 +1,7 @@
 ﻿using ResourceManager.Domain.Enums;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace ResourceManager.Domain.Models
@@ -10,6 +11,8 @@ namespace ResourceManager.Domain.Models
 		/// <summary>
 		/// Identyfikator dzierżawcy, którego dotyczą te dane.
 		/// </summary>
+		/// 
+		[Key]
 		Guid Id { get; set; }
 		/// <summary>
 		/// Status zasobu; dostępny i zajęty.
