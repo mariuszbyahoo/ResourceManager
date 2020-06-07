@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -22,14 +23,16 @@ namespace ResourceManager.Controllers
         private ITenantRepo _tenants;
         private IConfiguration _config;
         private ILoggerService _logger;
+        private IEmailService _email;
         private string dateFormat;
 
-        public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, ILoggerService logger)
+        public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, ILoggerService logger, IEmailService email)
         {
             _resources = resources;
             _tenants = tenants;
             _config = config;
             _logger = logger;
+            _email = email;
             dateFormat = _config.GetSection("DateFormats").GetSection("Default").Value;
         }
 
@@ -75,23 +78,33 @@ namespace ResourceManager.Controllers
         /// <returns></returns>
         [HttpDelete]
         [Route("delete")]
-        public IActionResult WithdrawResourceAction(string withdrawalDate, Guid Id)
+        public async Task<IActionResult> WithdrawResourceAction(string withdrawalDate, Guid Id)
         {
             var res = _resources.GetResource(Id);
             if (res == null)
                 return BadRequest("Resource with such an ID does not exist.");
 
-            DateTime date;
-            DateTime.TryParseExact(withdrawalDate, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+            DateTime dateOfWithdrawal;
+            DateTime.TryParseExact(withdrawalDate, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out dateOfWithdrawal);
 
             // Jeśli zasób był zajęty w przeszłości
             if (res.OccupiedTill < DateTime.Now && res.LeasedTo != Guid.Empty)
-                WithdrawResource(res, date);
-            else 
-                /* TODO powiadom o zerwaniu umowy przez dostawcę i konieczności zwrotu zasobu do dostawcy ze skutkiem na dzień {date}
-                 TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
-                WithdrawResource(res, date);
-
+            {
+                WithdrawResource(res, dateOfWithdrawal);
+            }
+            else
+            {
+                // jeśli zostanie zwolniony przed usunięciem z puli, to nie ma co wysyłać maila
+                if (res.OccupiedTill > dateOfWithdrawal)
+                {
+                    // TODO Dorób serwis, odpowiadający za wybranie adresu e-mail z tabeli w DB
+                    await _email.NotifyByEmail(res.LeasedTo, "mariusz.budzisz@yahoo.com", 
+                        $"Zerwano umowę dzierżawy ze skutkiem na dzień {dateOfWithdrawal.Date}.", 
+                        $"Dotyczy zasobu o ID: {res.Id}", _config);
+                }
+                /* TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
+                WithdrawResource(res, dateOfWithdrawal);
+            }
             return NoContent();
         }
 

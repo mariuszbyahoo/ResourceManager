@@ -38,6 +38,7 @@ namespace ResourceManager
             services.AddSingleton<ILoggerService, Logger>();
             services.AddSingleton<IResourceFactory, ResourceFactory>();
             services.AddSingleton<ITenantsFactory, TenantsFactory>();
+            services.AddSingleton<IEmailService, EmailService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
