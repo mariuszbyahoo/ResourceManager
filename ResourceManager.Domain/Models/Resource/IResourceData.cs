@@ -8,6 +8,10 @@ namespace ResourceManager.Domain.Models
     public interface IResourceData
     {
 		/// <summary>
+		/// Identyfikator dzierżawcy, którego dotyczą te dane.
+		/// </summary>
+		Guid Id { get; set; }
+		/// <summary>
 		/// Status zasobu; dostępny i zajęty.
 		/// </summary>
 		ResourceStatus Availability { get; set; }

@@ -7,6 +7,7 @@ namespace ResourceManager.Domain.Models
 {
     public class ResourceData : IResourceData
     {
+        public Guid Id { get; set; }
         public ResourceStatus Availability { get; set; }
         public Guid LeasedTo { get; set; }
         public DateTime OccupiedTill { get; set; }
