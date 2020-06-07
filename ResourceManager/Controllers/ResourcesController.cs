@@ -185,8 +185,6 @@ namespace ResourceManager.Controllers
             if (tenant == null)
                 return BadRequest("Resource with such an ID is missing");
 
-            //TODO *************** Dodaj TenantsConflict w razie gdyby zasób był obecnie dzierżawiony *********
-
             DateTime date;
             DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
@@ -243,7 +241,6 @@ namespace ResourceManager.Controllers
 
             resource = _resources.FilterUnavailableResources(resources).FirstOrDefault();
             if (resource == null)
-                // TODO zaimplementuj wywłaszczenie zasobu od dzierżawcy z najniższym priorytetem spośród tych, którzy dzierżawią dany wariant zasobu
                 return NotFound("Has not found any available resource with such a variant");
 
             DateTime date;
@@ -252,7 +249,7 @@ namespace ResourceManager.Controllers
             if (LeaseResource(variant, tenant, date, out resource))
                 return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {ten}, and a message has been sent");
             else
-                // Nie wyrzucam wyjątku, zamiast tego sygnalizuję, że coś poszło nie tak, ponieważ kod nie powinien tu dotrzeć w ogóle.
+                // Nie wyrzucam wyjątku, zamiast tego sygnalizuję, że coś poszło nie tak, ponieważ kod nie powinien tu dotrzeć w ogóle po sprawdzeniu możliwych scenariuszy negatywnych.
                 return StatusCode(StatusCodes.Status500InternalServerError, "Something went bad during lease granting process occured when leasing the resource, check the 'errors.txt' file");
         }
 

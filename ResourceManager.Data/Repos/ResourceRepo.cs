@@ -46,7 +46,9 @@ namespace ResourceManager.Data.Repos
 
         public Resource[] FilterUnavailableResources(Resource[] resources)
         {
-            return resources.Where(r => r.Availability.Equals(ResourceStatus.Available)).ToArray();
+            var availableResources = resources.Where(r => r.Availability.Equals(ResourceStatus.Available) || r.OccupiedTill < DateTime.Now).ToArray();
+            //availableResources = availableResources.Where(r => r.OccupiedTill < DateTime.Now).ToArray();
+            return availableResources;
         }
 
         public Resource GetResource(Guid id)
@@ -62,7 +64,6 @@ namespace ResourceManager.Data.Repos
         public bool LeaseResource(IResource resource, ITenant tenant, DateTime date)
         {
 
-            // ODN DATY: WYDZIERŻAW Z CHWILĄ OBECNĄ, DO WSKAZANEJ DATY.
 
             resource.Availability = Domain.Enums.ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;
@@ -80,7 +81,6 @@ namespace ResourceManager.Data.Repos
 
             var resource = FilterUnavailableResources(resources).FirstOrDefault();
 
-            // ODN DATY: WYDZIERŻAW Z CHWILĄ OBECNĄ, DO WSKAZANEJ DATY.
             resource.OccupiedTill = date;
             resource.Availability = ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;
