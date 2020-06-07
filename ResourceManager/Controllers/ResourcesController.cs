@@ -241,6 +241,7 @@ namespace ResourceManager.Controllers
             var resourceData = _leasingDatas.GetDataAboutResource(res);
             if (resourceData == null)
                 return NotFound("Resource with such an ID is missing");
+            var acquiredTerminationDate = resourceData.OccupiedTill;
             var tenant = _tenants.GetTenant(ten); // TODO change it to TenantData object
             if (tenant == null)
                 return NotFound("Tenant with such an ID is missing");
@@ -248,16 +249,18 @@ namespace ResourceManager.Controllers
             DateTime date;
             DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
-            if (!resourceData.LeasedTo.Equals(Guid.Empty) && resourceData.OccupiedTill > DateTime.Now) 
+            if (!resourceData.LeasedTo.Equals(Guid.Empty) && acquiredTerminationDate > DateTime.Now) 
                 return ResolveTenantsConflict(resource, tenant, date);
-            if (resourceData.OccupiedTill > DateTime.Now)
+            if (acquiredTerminationDate > DateTime.Now)
                 return NotFound($"Requested Resource is not available to anyone at the time... come back at {resourceData.OccupiedTill}");
 
             if (LeaseResource(resource, tenant, date))
             {
-
-                    // TODO implement email notification
-                return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
+                var msg = $"Resource with an ID of:{res} leased to the tenant with an ID of {ten}";
+                _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress,
+                    "Podpisano umowę dzierżawy", $"Dot. zasobu o Id {res}, wchodzi w życie w dn. {date}", _config);
+                msg += $", and message has been sent succesfully";
+                return Ok(msg);
             }
             else
             {
@@ -280,6 +283,7 @@ namespace ResourceManager.Controllers
                 if (_leasingDatas.SetDataAboutResource(resource.Id, _resourceDataFactory.CreateInstance(resource.Id, date, tenant, "ResourceData"))
                     .GetType().Equals(typeof(OkObjectResult))) 
                 {
+                    // Notify with an email
                     return _resources.LeaseResource(resource, tenant, date);
                 }
                 else
