@@ -157,8 +157,8 @@ namespace ResourceManager.Controllers
                 return NotFound($"Resource with an ID of: {res} is missing");
 
             var newResourceData = _resourceDataFactory.CreateInstance(res, date, _tenants.GetTenant(ten), "ResourceData");
-            var acquiredResourceData = _leasingDatas.GetDataAboutResource(res);
-            if (acquiredResourceData.OccupiedTill < date)
+            var acquiredTerminationDate = _leasingDatas.GetDataAboutResource(res).OccupiedTill;
+            if (acquiredTerminationDate < date)
                 return BadRequest("Resource will be available at the specified date, maybe wrong date provided?");
             var tenant = _tenants.GetTenant(ten);
             if (tenant == null)
@@ -166,13 +166,21 @@ namespace ResourceManager.Controllers
             /* IF o którym mowa w Docsach do metody */
             if ((!newResourceData.LeasedTo.Equals(tenant.Id)) && (!newResourceData.LeasedTo.Equals(Guid.Empty)))
                 return BadRequest($"Resource with ID of:{newResourceData.Id} not belongs to tenant with ID of: {tenant.Id}");
-            if (acquiredResourceData.OccupiedTill < DateTime.Now)
+            if (acquiredTerminationDate < DateTime.Now)
                 return BadRequest("This resource is already available, wrong reource ID provided");
 
             if (FreeResource(_resources.GetResource(res), tenant, date))
             {
-                // TODO dodaj wysłanie maila do dzierżawcy
-                return Ok($"Resource with an ID of:{res} released, and message has been sent succesfully to tenant with an ID of:{ten}");
+                var msg = $"Resource with an ID of:{res} released";
+                // Jeśli był do kogoś przyporządkowany ten zasób na dzień dzisiejszy, to wyślij maila
+                if (!_leasingDatas.GetDataAboutResource(res).LeasedTo.Equals(Guid.Empty) && acquiredTerminationDate > DateTime.Now)
+                {
+                    _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress, 
+                        "Zerwano umowę dzierżawy", $"Dot. zasobu o Id {res}, wchodzi w życie w dn. {date}", _config);
+                    msg += $", and message has been sent succesfully to tenant with an ID of:{ten}";
+                }
+
+                return Ok(msg);
             }
             else
             {
