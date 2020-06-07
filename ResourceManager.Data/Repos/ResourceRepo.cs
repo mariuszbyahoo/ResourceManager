@@ -37,7 +37,7 @@ namespace ResourceManager.Data.Repos
         public bool FreeResource(IResource resource, ITenant tenant, DateTime date)
         {
             resource.Availability = Domain.Enums.ResourceStatus.Available;
-            resource.LeasedTo = Guid.Empty;
+            resource.LeasedTo = tenant.Id;
             resource.OccupiedTill = date; 
             Ctx.Update(resource);
             Ctx.SaveChanges();
@@ -47,7 +47,6 @@ namespace ResourceManager.Data.Repos
         public Resource[] FilterUnavailableResources(Resource[] resources)
         {
             var availableResources = resources.Where(r => r.Availability.Equals(ResourceStatus.Available) || r.OccupiedTill < DateTime.Now).ToArray();
-            //availableResources = availableResources.Where(r => r.OccupiedTill < DateTime.Now).ToArray();
             return availableResources;
         }
 
@@ -63,8 +62,6 @@ namespace ResourceManager.Data.Repos
 
         public bool LeaseResource(IResource resource, ITenant tenant, DateTime date)
         {
-
-
             resource.Availability = Domain.Enums.ResourceStatus.Occupied;
             resource.LeasedTo = tenant.Id;
             resource.OccupiedTill = date;

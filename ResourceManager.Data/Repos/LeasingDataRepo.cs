@@ -61,6 +61,9 @@ namespace ResourceManager.Data.Repos
             processed.LeasedTo = newData.LeasedTo;
             processed.OccupiedTill = newData.OccupiedTill;
 
+            Context.Update(processed);
+            Context.SaveChanges();
+
             return new OkObjectResult(0);
         }
 
@@ -70,7 +73,7 @@ namespace ResourceManager.Data.Repos
             {
                 var res = await _removeService.CheckDate(fromDate);
                 Context.ResourceDatas.Remove(GetDataAboutResource(id) as ResourceData);
-                Context.SaveChanges();
+                await Context.SaveChangesAsync();
                 return new OkObjectResult(0);
             }
             catch (Exception ex)

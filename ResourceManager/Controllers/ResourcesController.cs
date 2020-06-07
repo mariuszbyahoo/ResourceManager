@@ -136,44 +136,56 @@ namespace ResourceManager.Controllers
 
         /// <summary>
         /// Metoda wywołująca właściwą komunikację z bazą danych, posiada zabezpieczenie przed NullReferenceException.
+        /// !!!!!
+        /// Dla uproszczenia przyjąłem, że mając resource, który jest w drodze do dostarczenia dostawcy 
+        /// (nie jest wynajmowany - GUID.Empty) program to zignoruje, i przypisze do tego 
+        /// (jeszcze nie dostępnego do dzierżawy) zasobu właśnie do tenanta wskazanego przy wywołaniu metody, 
+        /// to też nie ma dużego znaczenia ponieważ jeśli dany zasób był w przeszłości wynajmowany przez kogoś 
+        /// (occupiedTill z datą przeszłą i leasedTo które nie jest nullem) to po prostu wynajmie go nowemu dzierżawcy, 
+        /// i nie będzie wysyłał maila temu, który w przeszłości wynajmował ten zasób.
         /// </summary>
         /// <param name="res">Id zasobu, którego akcja dotyczy</param>
-        /// <param name="ten">Id dzierżawcy, który żąda dzierżawy zasobu</param>
+        /// <param name="ten">Id dzierżawcy, który żąda dzierżawy zasobu. Jeśli zasób nie ma przypisanego dzierżawcy,
+        /// W takim przypadku można wskazać tutaj ID dowolnego istniejącego dzierżawcy.</param>
         /// <param name="availableFrom">Data, z którą zasób zostanie zwolniony: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób będzie wolny)</param>
         /// <returns></returns>
         [HttpPatch]
         [Route("free")]
         public ActionResult FreeResourceAction(Guid res, Guid ten, string availableFrom)
         {
-            // TODO zamiast encji będą procesowane encje zaw. dane odn obiektu resource.
-            var resource = _resources.GetResource(res);
-            if (resource == null)
+            DateTime date;
+            DateTime.TryParseExact(availableFrom, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+
+            if (_resources.GetResource(res) == null)
                 return BadRequest($"Resource with an ID of: {res} is missing");
+
+            var resourceData = _resourceDataFactory.CreateInstance(res, date, _tenants.GetTenant(ten), "ResourceData");
+
+            if (resourceData.OccupiedTill < date)
+                return BadRequest("Resource will be available at the specified date, maybe wrong date provided?");
             var tenant = _tenants.GetTenant(ten);
             if (tenant == null)
                 return BadRequest($"Tenant with an ID of: {ten} is missing");
-            if (!resource.LeasedTo.Equals(tenant.Id))
-                return BadRequest($"Resource with ID of:{resource.Id} not belongs to tenant with ID of: {tenant.Id}");
-            if (resource.Availability.Equals(ResourceStatus.Available))
+            /* IF o którym mowa w Docsach do metody */
+            if ((!resourceData.LeasedTo.Equals(tenant.Id)) && (!resourceData.LeasedTo.Equals(Guid.Empty)))
+                return BadRequest($"Resource with ID of:{resourceData.Id} not belongs to tenant with ID of: {tenant.Id}");
+            if (resourceData.Availability.Equals(ResourceStatus.Available))
                 return BadRequest("This resource is already available, wrong reource ID provided");
 
-            DateTime date;
-            DateTime.TryParseExact(availableFrom, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
-            if (resource.OccupiedTill < date)
-                return BadRequest("Resource will be available at the specified date, maybe wrong date provided?");
+            // No a co jeśli zasób nie jest dzierżawiony ale ma być udostępniony wcześniej?
 
-            if (FreeResource(resource, tenant, date))
+            if (FreeResource(_resources.GetResource(res), tenant, date))
             {
+                // TODO dodaj wysłanie maila do dzierżawcy
                 return Ok($"Resource with an ID of:{res} released, and message has been sent succesfully to tenant with an ID of:{ten}");
             }
             else
             {
-                // ręcznie zwracam kod odpowiedzi, by nie terminować działania programu i jednocześnie poinformować użytkownika API o błędzie.
-                // Który z kolei jest logowany w metodzie poniżej
+                /* wejście programu do tego bloku kodu oznacza, że podczas zwalniania zasobu wystąpił wyjątek:
+                ręcznie zwracam kod odpowiedzi, by nie terminować działania programu i jednocześnie poinformować użytkownika API o błędzie.
+                Który z kolei jest logowany w metodzie poniżej */
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when releasing the resource, check the 'errors.txt' file");
             }
-
-            // TODO notify the tenant !!
         }
 
         /// <summary>
@@ -187,7 +199,21 @@ namespace ResourceManager.Controllers
         {
             try
             {
-                return _resources.FreeResource(resource, tenant, date);
+
+
+                if (_resources.FreeResource(resource, tenant, date))
+                { 
+                    if (_leasingDatas.GetDataAboutResource(resource.Id).LeasedTo.Equals(Guid.Empty))
+                        tenant.Id = Guid.Empty;
+
+                    _leasingDatas.SetDataAboutResource(resource.Id, _resourceDataFactory.CreateInstance(resource.Id, date, tenant, "ResourceData"));
+                 /* Jeśli resource nie jest nikomu udostępniony - leasedTo = Guid.Empty, 
+                 * to wtedy po prostu w pamięci tylko i wyłącznie tej metody 
+                 * przypisuję pusty GUID do ID przekazanego tenanta i go zwalniam, w innym przypadku jego ID
+                 * pozostaje takie jakie było. Podyktowane jest to koniecznością implementacji niezmienionego interfejsu
+                 */
+                }
+                return true;
             }
             catch (Exception ex)
             {
