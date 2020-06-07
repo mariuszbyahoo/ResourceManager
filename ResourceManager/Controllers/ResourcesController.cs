@@ -386,7 +386,15 @@ namespace ResourceManager.Controllers
                     // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
                     if (LeaseResource(resource, tenant, leaseTill))
                     {
-                        return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and a message has been sent, the resource has been expropriated from a user with an ID of {concurrent.Id}");
+                    // notify tenant with higher priority
+                        var msg = $"Resource with an id of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
+                        _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress,
+                            "Podpisano umowę dzierżawy", $"Dot. zasobu o id {resource.Id}, będzie trwać do w dn. {leaseTill}", _config);
+                    // notify expropriated tenant
+                        msg = $"Resource with an id of:{concurrent.Id} has been expropriated from the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
+                        _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(concurrent.Id).EmailAddress,
+                            "Wywłaszczono umowę dzierżawy", $"Dot. zasobu o id {resource.Id}, ze skutkiem natychmiastowym", _config);
+                    return Ok(msg);
                     }
                     else
                     {
