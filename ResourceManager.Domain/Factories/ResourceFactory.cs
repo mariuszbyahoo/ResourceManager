@@ -25,7 +25,7 @@ namespace ResourceManager.Domain.Factories
                         Variant = variant
                     };
                 default:
-                    return null;
+                    throw new InvalidOperationException();
             }
         }
     }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using ResourceManager.Data.Repos;
 using ResourceManager.Data.Services;
 using ResourceManager.Domain.Enums;
+using ResourceManager.Domain.Factories;
 using ResourceManager.Domain.Models;
 
 namespace ResourceManager.Controllers
@@ -20,19 +21,27 @@ namespace ResourceManager.Controllers
     public class ResourcesController : Controller, IController
     {
         private IResourceRepo _resources;
+        private ILeasingDataRepo _leasingDatas;
         private ITenantRepo _tenants;
         private IConfiguration _config;
         private ILoggerService _logger;
         private IEmailService _email;
+        private IResourceDataFactory _resourceDataFactory;
+        private ITenantDataFactory _tenantDataFactory;
         private string dateFormat;
 
-        public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, ILoggerService logger, IEmailService email)
+        public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, 
+            ILoggerService logger, IEmailService email, ILeasingDataRepo leasingDatas,
+            IResourceDataFactory resourceDataFactory, ITenantDataFactory tenantDataFactory)
         {
             _resources = resources;
             _tenants = tenants;
             _config = config;
             _logger = logger;
             _email = email;
+            _resourceDataFactory = resourceDataFactory;
+            _tenantDataFactory = tenantDataFactory;
+            _leasingDatas = leasingDatas;
             dateFormat = _config.GetSection("DateFormats").GetSection("Default").Value;
         }
 
@@ -63,10 +72,12 @@ namespace ResourceManager.Controllers
         /// <summary>
         /// Właściwa implementacja metody kontrolera
         /// </summary>
-        /// <param name="resource">Data, z którą zasób staje się dostępny: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób będzie wolny)</param>
-        /// <param name="fromDate">Dodawany zasób</param>
+        /// <param name="resource">Dodawany zasób</param>
+        /// <param name="fromDate">Data, z którą zasób staje się dostępny: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób będzie wolny)</param>
         public void AddResource(IResource resource, DateTime fromDate)
         {
+            // TODO zaimplementuj poniższą linię w każdej metodzie poniżej.
+            _leasingDatas.AddDataAboutResource(_resourceDataFactory.CreateInstance(resource.Id, fromDate, "ResourceData"));
             _resources.AddResource(resource, fromDate);
         }
 

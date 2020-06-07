@@ -25,7 +25,7 @@ namespace ResourceManager.Domain.Factories
                         Priority = Priority
                     };
                 default:
-                    return null;
+                    throw new InvalidOperationException();
             }
         }
     }

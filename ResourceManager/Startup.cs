@@ -29,9 +29,7 @@ namespace ResourceManager
         {
             services.AddControllers();
 
-            services.AddDbContext<ManagerDbContext>(options => 
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")
-            ));
+            services.AddDbContext<ManagerDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")), ServiceLifetime.Transient);
             services.AddScoped<ITenantRepo, TenantRepo>();
             services.AddScoped<IResourceRepo, ResourceRepo>();
             services.AddScoped<ILeasingDataRepo, LeasingDataRepo>();
