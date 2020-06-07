@@ -132,8 +132,10 @@ namespace ResourceManager.Controllers
             if (resource.OccupiedTill < date)
                 return BadRequest("Resource will be available at the specified date, maybe wrong date provided?");
 
-                if (FreeResource(resource, tenant, date))
+            if (FreeResource(resource, tenant, date))
+            {
                 return Ok($"Resource with an ID of:{res} released, and message has been sent succesfully to tenant with an ID of:{ten}");
+            }
             else
             {
                 // ręcznie zwracam kod odpowiedzi, by nie terminować działania programu i jednocześnie poinformować użytkownika API o błędzie.
@@ -182,13 +184,14 @@ namespace ResourceManager.Controllers
             var tenant = _tenants.GetTenant(ten);
             if (tenant == null)
                 return BadRequest("Resource with such an ID is missing");
-            if (!resource.LeasedTo.Equals(Guid.Empty))
-                return ResolveTenantsConflict(resource, tenant);
 
             //TODO *************** Dodaj TenantsConflict w razie gdyby zasób był obecnie dzierżawiony *********
 
             DateTime date;
             DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+
+            if (!resource.LeasedTo.Equals(Guid.Empty) && resource.OccupiedTill > DateTime.Now)
+                return ResolveTenantsConflict(resource, tenant, date);
 
             if (LeaseResource(resource, tenant, date))
                 return Ok($"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and a message has been sent");
@@ -240,7 +243,7 @@ namespace ResourceManager.Controllers
 
             resource = _resources.FilterUnavailableResources(resources).FirstOrDefault();
             if (resource == null)
-                // TODO zaimplementuj wywłaszczenie zasobu od dzierżawcy z najniższym priorytetem
+                // TODO zaimplementuj wywłaszczenie zasobu od dzierżawcy z najniższym priorytetem spośród tych, którzy dzierżawią dany wariant zasobu
                 return NotFound("Has not found any available resource with such a variant");
 
             DateTime date;
@@ -249,7 +252,8 @@ namespace ResourceManager.Controllers
             if (LeaseResource(variant, tenant, date, out resource))
                 return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {ten}, and a message has been sent");
             else
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
+                // Nie wyrzucam wyjątku, zamiast tego sygnalizuję, że coś poszło nie tak, ponieważ kod nie powinien tu dotrzeć w ogóle.
+                return StatusCode(StatusCodes.Status500InternalServerError, "Something went bad during lease granting process occured when leasing the resource, check the 'errors.txt' file");
         }
 
         /// <summary>
@@ -291,8 +295,9 @@ namespace ResourceManager.Controllers
         /// </summary>
         /// <param name="resource">Przedmiot konfliktu</param>
         /// <param name="tenant">Dzierżawca wnoszący o dzierżawę</param>
+        /// <param name="leaseTill">Termin do którego wniesiono o dzierżawę</param>
         /// <returns></returns>
-        private IActionResult ResolveTenantsConflict(IResource resource, ITenant tenant)
+        private IActionResult ResolveTenantsConflict(IResource resource, ITenant tenant, DateTime leaseTill)
         {
                 var concurrent = _tenants.GetTenant(resource.LeasedTo);
                 if (concurrent == null)
@@ -300,12 +305,12 @@ namespace ResourceManager.Controllers
                 if (concurrent.Priority < tenant.Priority)
                 {
                 // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
-                    if (LeaseResource(resource, tenant, DateTime.Now))
-                        return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and a message has been sent");
+                    if (LeaseResource(resource, tenant, leaseTill))
+                        return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and a message has been sent, the resource has been expropriated from a user with an ID of {concurrent.Id}");
                     else
-                        return StatusCode(StatusCodes.Status500InternalServerError, "An error occured when leasing the resource, check the 'errors.txt' file");
+                        return StatusCode(StatusCodes.Status500InternalServerError, "Somehow cannot lease the resource, check the 'errors.txt' file");
                 }
-                return BadRequest("Resource with such an ID is already leased by a tenant with higher priority");
+                return NotFound("Resource with such an ID is already leased by a tenant with higher priority");
         }
     }
 }
