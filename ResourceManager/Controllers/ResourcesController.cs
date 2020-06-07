@@ -256,10 +256,9 @@ namespace ResourceManager.Controllers
 
             if (LeaseResource(resource, tenant, date))
             {
-                var msg = $"Resource with an ID of:{res} leased to the tenant with an ID of {ten}";
+                var msg = $"Resource with an ID of:{res} leased to the tenant with an ID of {ten}, and message has been sent succesfully";
                 _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress,
                     "Podpisano umowę dzierżawy", $"Dot. zasobu o Id {res}, wchodzi w życie w dn. {date}", _config);
-                msg += $", and message has been sent succesfully";
                 return Ok(msg);
             }
             else
@@ -283,7 +282,6 @@ namespace ResourceManager.Controllers
                 if (_leasingDatas.SetDataAboutResource(resource.Id, _resourceDataFactory.CreateInstance(resource.Id, date, tenant, "ResourceData"))
                     .GetType().Equals(typeof(OkObjectResult))) 
                 {
-                    // Notify with an email
                     return _resources.LeaseResource(resource, tenant, date);
                 }
                 else
@@ -326,7 +324,12 @@ namespace ResourceManager.Controllers
             DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
             if (LeaseResource(variant, tenant, date, out resource))
-                return Ok($"Resource with an ID of:{resource.Id} leased to the tenant with an ID of {ten}, and a message has been sent");
+            {
+                var msg = $"Resource with a variant of:{variant} leased to the tenant with an ID of {ten}, and message has been sent succesfully";
+                _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress,
+                    "Podpisano umowę dzierżawy", $"Dot. zasobu z wariantu {variant}, wchodzi w życie w dn. {date}", _config);
+                return Ok(msg);
+            }
             else
                 _logger.LogToFile("Something went bad when setting ResourceDatas table, inspect ResourcesController, line 302", "errors.txt");
                 return StatusCode(StatusCodes.Status500InternalServerError, "Something went bad during lease granting process occured when leasing the resource, check the 'errors.txt' file");
