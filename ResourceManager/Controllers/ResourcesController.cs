@@ -129,6 +129,7 @@ namespace ResourceManager.Controllers
         [Route("free")]
         public ActionResult FreeResourceAction(Guid res, Guid ten, string availableFrom)
         {
+            // TODO zamiast encji będą procesowane encje zaw. dane odn obiektu resource.
             var resource = _resources.GetResource(res);
             if (resource == null)
                 return BadRequest($"Resource with an ID of: {res} is missing");
@@ -170,7 +171,6 @@ namespace ResourceManager.Controllers
         {
             try
             {
-                // TODO send a message to Tenant
                 return _resources.FreeResource(resource, tenant, date);
             }
             catch (Exception ex)
