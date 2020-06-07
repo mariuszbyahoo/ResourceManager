@@ -18,7 +18,7 @@ namespace ResourceManager.Data.Services
                 var pass = _configuration.GetSection("NotificationEmail").GetSection("GmailAppPassword").Value;
                 var username = _configuration.GetSection("NotificationEmail").GetSection("GmailAddress").Value;
 
-                var from = new MailboxAddress("AutoMail", "auto@creativecookies.it");
+                var from = new MailboxAddress("ResourceManager");
                 var to = new MailboxAddress(receiverID.ToString(), receiverAddress);
 
                 msg.From.Add(from);
