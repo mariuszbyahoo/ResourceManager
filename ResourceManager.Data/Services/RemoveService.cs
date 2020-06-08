@@ -1,4 +1,5 @@
-﻿using ResourceManager.Data.Repos;
+﻿using Microsoft.AspNetCore.Mvc;
+using ResourceManager.Data.Repos;
 using ResourceManager.Data.Services;
 using System;
 using System.Collections.Generic;
@@ -19,8 +20,10 @@ namespace ResourceManager.Services
 
         public async Task<bool> CheckDate(DateTime withdrawalDate)
         {
-            var timesToCheckInADay = withdrawalDate.Subtract(DateTime.Now).Days * 4; // Będzie sprawdzał cztery razy dziennie
-            for (int i = 0; i < (timesToCheckInADay-1); i++)
+            var timesToCheck = withdrawalDate.Subtract(DateTime.Now).TotalHours / 4;
+            timesToCheck = Math.Round(timesToCheck, MidpointRounding.AwayFromZero);
+            // TODO jeśli będzie wskazane że na jutro, to wyrzuci dzisiaj...
+            for (int i = 0; i < timesToCheck; i++)
             {
                 if (DateTime.Now.Date.Equals(withdrawalDate.Date))
                 {

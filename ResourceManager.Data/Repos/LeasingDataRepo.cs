@@ -43,7 +43,8 @@ namespace ResourceManager.Data.Repos
 
         public IResourceData GetDataAboutResource(Guid resourceId)
         {
-            return Context.ResourceDatas.Where(r => r.Id.Equals(resourceId)).FirstOrDefault();
+            var res = Context.ResourceDatas.Where(r => r.Id.Equals(resourceId)).FirstOrDefault();
+            return res;
         }
 
         public ITenantData GetDataAboutTenant(Guid tenantId)

@@ -19,17 +19,5 @@ namespace ResourceManager.Domain.Models
 		/// Wariant zasobu
 		/// </summary>
 		string Variant { get; set; }
-
-		/// <summary>
-		/// Status zasobu; dostępny i zajęty.
-		/// </summary>
-		ResourceStatus Availability { get; set; }
-
-		/// <summary>
-		/// Identyfikator dzierżawcy 
-		/// </summary>
-		Guid LeasedTo { get; set; }
-
-		public DateTime OccupiedTill { get; set; }
 	}
 }

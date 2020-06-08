@@ -16,37 +16,56 @@ namespace ResourceManager.Data.Repos
     {
         public ManagerDbContext Ctx { get; set; }
         private IRemoveService removeService;
+        private ILeasingDataRepo _leasingData;
+        private IResourceDataFactory _resourceDataFactory;
         private ILoggerService _logger;
 
-        public ResourceRepo(ManagerDbContext ctx, IRemoveService service, ILoggerService logger)
+        public ResourceRepo(ManagerDbContext ctx, IRemoveService service, ILoggerService logger, 
+            ILeasingDataRepo leasingData, IResourceDataFactory resourceDataFactory)
         {
             Ctx = ctx;
             removeService = service;
             _logger = logger;
+            _leasingData = leasingData;
+            _resourceDataFactory = resourceDataFactory;
         }
 
         public void AddResource(IResource resource, DateTime availableFromDate)
         {
             var res = resource as Resource;
-            res.OccupiedTill = availableFromDate;
-            res.Availability = ResourceStatus.Occupied;
             Ctx.Resources.Add(res);
             Ctx.SaveChanges();
         }
 
         public bool FreeResource(IResource resource, ITenant tenant, DateTime date)
         {
-            resource.Availability = Domain.Enums.ResourceStatus.Available;
-            resource.LeasedTo = tenant.Id;
-            resource.OccupiedTill = date; 
             Ctx.Update(resource);
             Ctx.SaveChanges();
             return true;
         }
-
+        //************************* SPRAWDŹ CZY DZIAŁA POPRAWNIE!!!!
         public Resource[] FilterUnavailableResources(Resource[] resources)
         {
-            var availableResources = resources.Where(r => r.Availability.Equals(ResourceStatus.Available) || r.OccupiedTill < DateTime.Now).ToArray();
+            var resultLength = 0;
+            var processedResourceDatas = new ResourceData[resources.Length];
+            for(int i = 0; i < resources.Length; i ++)
+            {
+                var resource = resources[i];
+                var processedData = _leasingData.GetDataAboutResource(resource.Id);
+                //ResourceData processedResourceData = _leasingData.GetDataAboutResource(resource.Id);
+                // jeśli kontrakt na dany zasób zakończył się w przeszłości, to...
+                if (processedData.OccupiedTill < DateTime.Now)
+                {
+                    processedResourceDatas[resultLength] = _resourceDataFactory.CreateInstance(processedData.Id,
+                        processedData.OccupiedTill, null, "ResourceData") as ResourceData;
+                    resultLength++;
+                }
+            }
+            var availableResources = new Resource[resultLength];
+            for(int i = 0; i < availableResources.Length; i++)
+            {
+                availableResources[i] = Ctx.Resources.Where(r => r.Id.Equals(processedResourceDatas[i].Id)).FirstOrDefault();
+            }
             return availableResources;
         }
 
@@ -62,9 +81,6 @@ namespace ResourceManager.Data.Repos
 
         public bool LeaseResource(IResource resource, ITenant tenant, DateTime date)
         {
-            resource.Availability = Domain.Enums.ResourceStatus.Occupied;
-            resource.LeasedTo = tenant.Id;
-            resource.OccupiedTill = date;
             Ctx.Update(resource);
             Ctx.SaveChanges();
             return true;
@@ -77,10 +93,6 @@ namespace ResourceManager.Data.Repos
                 return null;
 
             var resource = FilterUnavailableResources(resources).FirstOrDefault();
-
-            resource.OccupiedTill = date;
-            resource.Availability = ResourceStatus.Occupied;
-            resource.LeasedTo = tenant.Id;
 
             Ctx.Update(resource);
             Ctx.SaveChanges();

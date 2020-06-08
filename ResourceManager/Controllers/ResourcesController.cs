@@ -31,7 +31,7 @@ namespace ResourceManager.Controllers
 
         public ResourcesController(IResourceRepo resources, ITenantRepo tenants, IConfiguration config, 
             ILoggerService logger, IEmailService email, ILeasingDataRepo leasingDatas,
-            IResourceDataFactory resourceDataFactory, ITenantDataFactory tenantDataFactory)
+            IResourceDataFactory resourceDataFactory)
         {
             _resources = resources;
             _tenants = tenants;
@@ -89,7 +89,7 @@ namespace ResourceManager.Controllers
         [Route("delete")]
         public async Task<IActionResult> WithdrawResourceAction(string withdrawalDate, Guid Id)
         {
-            var res = _resources.GetResource(Id);
+            var res = _leasingDatas.GetDataAboutResource(Id);
             if (res == null)
                 return NotFound("Resource with such an ID does not exist.");
 
@@ -100,7 +100,7 @@ namespace ResourceManager.Controllers
             // to...
             if ((res.OccupiedTill < DateTime.Now) && (!res.LeasedTo.Equals(Guid.Empty)))
             {
-                WithdrawResource(res, dateOfWithdrawal);
+                WithdrawResource(_resources.GetResource(res.Id), dateOfWithdrawal);
             }
             else // jeśli nie, to jest zajęty, i wtedy....
             {
@@ -114,9 +114,8 @@ namespace ResourceManager.Controllers
                             $"Zerwano umowę dzierżawy ze skutkiem na dzień {dateOfWithdrawal.Date}.", 
                             $"Dotyczy zasobu o ID: {res.Id}", _config);
                 }
-                // Jeśli nie będzie aktualnie zajęty, to nie ma co wysyłać maila.
                 /* TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
-                WithdrawResource(res, dateOfWithdrawal);
+                WithdrawResource(_resources.GetResource(res.Id), dateOfWithdrawal);
             }
             return NoContent();
         }
@@ -250,7 +249,7 @@ namespace ResourceManager.Controllers
             DateTime.TryParseExact(leasedTill, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
             if (!resourceData.LeasedTo.Equals(Guid.Empty) && acquiredTerminationDate > DateTime.Now) 
-                return ResolveTenantsConflict(resource, tenant, date);
+                return ResolveTenantsConflict(resourceData, tenant, date);
             if (acquiredTerminationDate > DateTime.Now)
                 return NotFound($"Requested Resource is not available to anyone at the time... come back at {resourceData.OccupiedTill}");
 
@@ -359,7 +358,7 @@ namespace ResourceManager.Controllers
                 if (resource == null)
                     return false;
 
-                return _resources.LeaseResource(resource, tenant, date);
+                return LeaseResource(resource, tenant, date);
             }
             catch(Exception ex)
             {
@@ -376,24 +375,24 @@ namespace ResourceManager.Controllers
         /// <param name="tenant">Dzierżawca wnoszący o dzierżawę</param>
         /// <param name="leaseTill">Termin do którego wniesiono o dzierżawę</param>
         /// <returns></returns>
-        private IActionResult ResolveTenantsConflict(IResource resource, ITenant tenant, DateTime leaseTill)
+        private IActionResult ResolveTenantsConflict(IResourceData resourceData, ITenant tenant, DateTime leaseTill)
         {
-                var concurrent = _tenants.GetTenant(resource.LeasedTo);
+                var concurrent = _tenants.GetTenant(resourceData.LeasedTo);
                 if (concurrent == null)
                     return StatusCode(StatusCodes.Status500InternalServerError, "Resource is leased to tenant which is not existing anymore, an error occured.");
                 if (concurrent.Priority < tenant.Priority)
                 {
                     // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
-                    if (LeaseResource(resource, tenant, leaseTill))
+                    if (LeaseResource(_resources.GetResource(resourceData.Id), tenant, leaseTill))
                     {
                     // notify tenant with higher priority
-                        var msg = $"Resource with an id of:{resource.Id} leased to the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
+                        var msg = $"Resource with an id of:{resourceData.Id} leased to the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
                         _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress,
-                            "Podpisano umowę dzierżawy", $"Dot. zasobu o id {resource.Id}, będzie trwać do w dn. {leaseTill}", _config);
+                            "Podpisano umowę dzierżawy", $"Dot. zasobu o id {resourceData.Id}, będzie trwać do w dn. {leaseTill}", _config);
                     // notify expropriated tenant
                         msg = $"Resource with an id of:{concurrent.Id} has been expropriated from the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
                         _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(concurrent.Id).EmailAddress,
-                            "Wywłaszczono umowę dzierżawy", $"Dot. zasobu o id {resource.Id}, ze skutkiem natychmiastowym", _config);
+                            "Wywłaszczono umowę dzierżawy", $"Dot. zasobu o id {resourceData.Id}, ze skutkiem natychmiastowym", _config);
                     return Ok(msg);
                     }
                     else
