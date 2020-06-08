@@ -39,6 +39,7 @@ namespace ResourceManager.Data.Services
             await Task.Factory.StartNew(() =>
             {
                 var contents = new string[] {
+                    DateTime.Now.ToString(),
                     message,
                     "----------------------"
                 };

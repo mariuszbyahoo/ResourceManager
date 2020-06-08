@@ -29,16 +29,19 @@ namespace ResourceManager
         {
             services.AddControllers();
 
-            services.AddDbContext<ManagerDbContext>(options => 
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")
-            ));
+            services.AddDbContext<ManagerDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")), ServiceLifetime.Transient);
             services.AddScoped<ITenantRepo, TenantRepo>();
             services.AddScoped<IResourceRepo, ResourceRepo>();
+            services.AddScoped<ILeasingDataRepo, LeasingDataRepo>();
+
             services.AddSingleton<IRemoveService, RemoveService>();
             services.AddSingleton<ILoggerService, Logger>();
-            services.AddSingleton<IResourceFactory, ResourceFactory>();
-            services.AddSingleton<ITenantsFactory, TenantsFactory>();
             services.AddSingleton<IEmailService, EmailService>();
+
+            services.AddSingleton<IResourceFactory, ResourceFactory>();
+            services.AddSingleton<IResourceDataFactory, ResourceDataFactory>();
+            services.AddSingleton<ITenantsFactory, TenantsFactory>();
+            services.AddSingleton<ITenantDataFactory, TenantDataFactory>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
