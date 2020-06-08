@@ -43,7 +43,6 @@ namespace ResourceManager.Data.Repos
             Ctx.SaveChanges();
             return true;
         }
-        //************************* SPRAWDŹ CZY DZIAŁA POPRAWNIE!!!!
         public Resource[] FilterUnavailableResources(Resource[] resources)
         {
             var resultLength = 0;
@@ -52,7 +51,6 @@ namespace ResourceManager.Data.Repos
             {
                 var resource = resources[i];
                 var processedData = _leasingData.GetDataAboutResource(resource.Id);
-                //ResourceData processedResourceData = _leasingData.GetDataAboutResource(resource.Id);
                 // jeśli kontrakt na dany zasób zakończył się w przeszłości, to...
                 if (processedData.OccupiedTill < DateTime.Now)
                 {
@@ -106,7 +104,10 @@ namespace ResourceManager.Data.Repos
         /// <param name="withdrawedOnDate"></param>
         public async void WithdrawResource(IResource resource, DateTime withdrawedOnDate)
         {
-            // TODO Metoda poprawnie w przypadku wyrzucenia wyjątku jak najbardziej loguje go do pliku, ale API zwraca 204 że niby ok, więc jak to zrobić żeby było ok skoro tutaj musi być void?
+            /* Metoda poprawnie w przypadku wyrzucenia wyjątku jak najbardziej loguje go do pliku, 
+             * ale API zwraca 204 że niby ok,z powodu tego że tutaj musi być void bo tak wygląda 
+             * interfejs którego metodę tutaj implementuję
+             */
             try
             {
                 var res = await removeService.CheckDate(withdrawedOnDate);

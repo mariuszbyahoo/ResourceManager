@@ -21,7 +21,9 @@ namespace ResourceManager.Domain.Factories
             switch (typeName)
             {
                 case "ResourceData":
-                    // TODO może zabezpiecz, żeby nie było możliwe utworzenie nowego rekordu z ID które nie odpowiada żadnemu rekordowi z tabeli Resources??
+                    /* Warto byłoby zabezpieczyć, żeby nie było możliwe utworzenie nowego rekordu z ID,
+                     * które nie odpowiada żadnemu rekordowi z tabeli Resources, choć i tak to niemożliwe bo 
+                     * z uwagi na NullCheck'i poprzedzające wywołanie do tej metody. */
                     ResourceStatus status;
                     if (occupiedTill > DateTime.Now)
                         status = ResourceStatus.Occupied;

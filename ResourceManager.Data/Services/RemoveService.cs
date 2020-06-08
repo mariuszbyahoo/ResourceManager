@@ -22,7 +22,6 @@ namespace ResourceManager.Services
         {
             var timesToCheck = withdrawalDate.Subtract(DateTime.Now).TotalHours / 4;
             timesToCheck = Math.Round(timesToCheck, MidpointRounding.AwayFromZero);
-            // TODO jeśli będzie wskazane że na jutro, to wyrzuci dzisiaj...
             for (int i = 0; i < timesToCheck; i++)
             {
                 if (DateTime.Now.Date.Equals(withdrawalDate.Date))

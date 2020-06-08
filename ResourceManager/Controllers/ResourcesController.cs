@@ -74,7 +74,6 @@ namespace ResourceManager.Controllers
         /// <param name="fromDate">Data, z którą zasób staje się dostępny: yyyyMMdd nie zawiera godzin (domyślnie do 00:00 wskazanego dnia - czyli w podanym dniu zasób będzie wolny)</param>
         public void AddResource(IResource resource, DateTime fromDate)
         {
-            // TODO zaimplementuj poniższą linię w każdej metodzie poniżej.
             _leasingDatas.AddDataAboutResource(_resourceDataFactory.CreateInstance(resource.Id, fromDate, null, "ResourceData"));
             _resources.AddResource(resource, fromDate);
         }
@@ -102,19 +101,21 @@ namespace ResourceManager.Controllers
             {
                 WithdrawResource(_resources.GetResource(res.Id), dateOfWithdrawal);
             }
-            else // jeśli nie, to jest zajęty, i wtedy....
+            else // jeśli jest zajęty, wtedy....
             {
                 // jeśli będzie wycofany w momencie w którym jest dzierżawiony, to wyślij maila
                 if (res.OccupiedTill > dateOfWithdrawal)
                 {
-                    if(!res.LeasedTo.Equals(Guid.Empty))
-                    // Niniejsza pozagnieżdżana ifologia gwarantuje, że aplikacja nie wyrzuci NullReferenceException w linii 115
+                    if (!res.LeasedTo.Equals(Guid.Empty))
+                    {
+                        // Niniejsza pozagnieżdżana ifologia gwarantuje, że aplikacja nie wyrzuci NullReferenceException 
                         await _email.NotifyByEmail(res.LeasedTo,
-                            _leasingDatas.GetDataAboutTenant(res.LeasedTo).EmailAddress, 
-                            $"Zerwano umowę dzierżawy ze skutkiem na dzień {dateOfWithdrawal.Date}.", 
+                            _leasingDatas.GetDataAboutTenant(res.LeasedTo).EmailAddress,
+                            $"Zerwano umowę dzierżawy ze skutkiem na dzień {dateOfWithdrawal.Date}.",
                             $"Dotyczy zasobu o ID: {res.Id}", _config);
+                    }
                 }
-                /* TODO Dorób obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
+                /* Warto byłoby dorobić obsługę sytuacji, gdy np. zasób jest wolny, wyznaczony do usunięcia na dzień 20.06.2020r. a ktoś go chce wydzierżawić w dn. 19-21.06.2020 */
                 WithdrawResource(_resources.GetResource(res.Id), dateOfWithdrawal);
             }
             return NoContent();
@@ -135,11 +136,13 @@ namespace ResourceManager.Controllers
         /// Metoda wywołująca właściwą komunikację z bazą danych, posiada zabezpieczenie przed NullReferenceException.
         /// !!!!!
         /// Dla uproszczenia przyjąłem, że mając resource, który jest w drodze do dostarczenia dostawcy 
-        /// (nie jest wynajmowany - GUID.Empty) program to zignoruje, i przypisze do tego 
+        /// (nie jest wynajmowany - GUID.Empty) program to zignoruje, i przekaże do metody
         /// (jeszcze nie dostępnego do dzierżawy) zasobu właśnie do tenanta wskazanego przy wywołaniu metody, 
         /// to też nie ma dużego znaczenia ponieważ jeśli dany zasób był w przeszłości wynajmowany przez kogoś 
         /// (occupiedTill z datą przeszłą i leasedTo które nie jest nullem) to po prostu wynajmie go nowemu dzierżawcy, 
         /// i nie będzie wysyłał maila temu, który w przeszłości wynajmował ten zasób.
+        /// 
+        /// Dziwaczna struktura spowodowana jest wymogiem implementacji interfejsu
         /// </summary>
         /// <param name="res">Id zasobu, którego akcja dotyczy</param>
         /// <param name="ten">Id dzierżawcy, który żąda dzierżawy zasobu. Jeśli zasób nie ma przypisanego dzierżawcy,
@@ -150,6 +153,9 @@ namespace ResourceManager.Controllers
         [Route("free")]
         public ActionResult FreeResourceAction(Guid res, Guid ten, string availableFrom)
         {
+            /* Myślę że warto byłoby zaimplementować przeciążenie tej metody, 
+             na potrzeby scenariusza opisanego w docsach do metody.
+             Uniknie się wtedy możliwych błędów. */
             DateTime date;
             DateTime.TryParseExact(availableFrom, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
             if (_resources.GetResource(res) == null)
@@ -171,7 +177,8 @@ namespace ResourceManager.Controllers
             if (FreeResource(_resources.GetResource(res), tenant, date))
             {
                 var msg = $"Resource with an ID of:{res} released";
-                // Jeśli był do kogoś przyporządkowany ten zasób na dzień dzisiejszy, to wyślij maila
+                /* Jeśli był do kogoś przyporządkowany ten zasób na dzień dzisiejszy, to wyślij maila
+                 !! I tu może być właśnie błąd opisany w  komentarzu 156-158*/
                 if (!_leasingDatas.GetDataAboutResource(res).LeasedTo.Equals(Guid.Empty) && acquiredTerminationDate > DateTime.Now)
                 {
                     _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress, 
@@ -241,7 +248,7 @@ namespace ResourceManager.Controllers
             if (resourceData == null)
                 return NotFound("Resource with such an ID is missing");
             var acquiredTerminationDate = resourceData.OccupiedTill;
-            var tenant = _tenants.GetTenant(ten); // TODO change it to TenantData object
+            var tenant = _tenants.GetTenant(ten); 
             if (tenant == null)
                 return NotFound("Tenant with such an ID is missing");
 
@@ -345,8 +352,6 @@ namespace ResourceManager.Controllers
         /// <returns></returns>
         public bool LeaseResource(string variant, ITenant tenant, DateTime date, out IResource resource)
         {
-            // LEPSZY SPOSÓB NA TRY CATCHE W ASP.NET CORE API : https://stackoverflow.com/questions/37793418/how-to-return-http-500-from-asp-net-core-rc2-web-api
-            // ZRÓB TAK JAK POWYŻEJ!!!!!!!!!!!!!!!!!!!!!!*******************************************************************************************
             try
             {
                 resource = null;
@@ -382,14 +387,13 @@ namespace ResourceManager.Controllers
                     return StatusCode(StatusCodes.Status500InternalServerError, "Resource is leased to tenant which is not existing anymore, an error occured.");
                 if (concurrent.Priority < tenant.Priority)
                 {
-                    // TODO notify the concurrent about the leasing contract termination due to higher priority tenant requested a resource
                     if (LeaseResource(_resources.GetResource(resourceData.Id), tenant, leaseTill))
                     {
-                    // notify tenant with higher priority
+                    // Powiadom nowego dzierżawcę
                         var msg = $"Resource with an id of:{resourceData.Id} leased to the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
                         _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(tenant.Id).EmailAddress,
                             "Podpisano umowę dzierżawy", $"Dot. zasobu o id {resourceData.Id}, będzie trwać do w dn. {leaseTill}", _config);
-                    // notify expropriated tenant
+                    // Powiadom wywłaszczonego dzierżawcę
                         msg = $"Resource with an id of:{concurrent.Id} has been expropriated from the tenant with an ID of {tenant.Id}, and message has been sent succesfully";
                         _email.NotifyByEmail(tenant.Id, _leasingDatas.GetDataAboutTenant(concurrent.Id).EmailAddress,
                             "Wywłaszczono umowę dzierżawy", $"Dot. zasobu o id {resourceData.Id}, ze skutkiem natychmiastowym", _config);

@@ -55,7 +55,7 @@ namespace ResourceManager.Controllers
         [Route("delete/{Id}")]
         public ActionResult RemoveTenantAction(Guid Id)
         {
-            // TODO zwolnij wszystkie wynajęte przez niego zasoby od razu.
+            // Warto byłoby tutaj zwolnić wszystkie zajęte przez niego zasoby od razu.
             if (_repo.GetTenant(Id) == null)
                 return BadRequest("Such a Tenant is missing.");
 

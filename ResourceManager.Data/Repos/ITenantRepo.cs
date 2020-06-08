@@ -11,13 +11,9 @@ namespace ResourceManager.Data.Repos
     {
         public ManagerDbContext Ctx { get; set; }
         public ITenantsFactory Factory { get; set; }
-        // ADD
         void AddTenant(ITenant tenant);
-        // DELETE
         void WithdrawTenant(ITenant tenant);
-        // MODIFY
         void SetTenantsPriority(ITenant tenant, byte newPriority);
-        // GET SINGLE
         ITenant GetTenant(Guid id);
     }
 }
